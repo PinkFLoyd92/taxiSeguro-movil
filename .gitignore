@@ -1,3 +1,9 @@
-node_modules/
-.expo/
-npm-debug.*
+*.iml
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.DS_Store
+/build
+/captures
+.externalNativeBuild
