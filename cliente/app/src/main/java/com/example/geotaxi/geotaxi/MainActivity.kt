@@ -28,15 +28,22 @@ import android.support.v7.widget.RecyclerView
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Button
-import android.widget.EditText
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 import org.osmdroid.bonuspack.location.GeocoderNominatim
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.views.overlay.Marker
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import java.io.IOException
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -45,8 +52,6 @@ class MainActivity : AppCompatActivity() {
     val MIN_TIME: Long = 5000
     val MIN_DISTANCE: Float = 10F
     val MY_PERMISSIONS_REQUEST_LOCATION = 1
-    val ROUTE_SERVICE_URL = "http://192.168.0.107:5000/route/v1/car/"
-    val NOMINATIM_SERVICE_URL = "http://192.168.0.107:80/nominatim/"
     val locationListener = MyLocationListener()
     var startGp: GeoPoint = GeoPoint(-2.1811931,-79.8765573)//Guayaquil
     var endGp: GeoPoint? = null
@@ -55,6 +60,9 @@ class MainActivity : AppCompatActivity() {
     var addressRecyclerView: RecyclerView? = null
     var addressCardView: CardView? = null
     var taxi_request: Button? = null
+    var serverAPI: ServerAPI? = null
+    var currentRoad: Road? = null
+    var clientId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,13 +71,16 @@ class MainActivity : AppCompatActivity() {
         //important! set your user agent to prevent getting banned from the osm servers
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
         setContentView(R.layout.activity_main)
-
         val searchEV = findViewById<EditText>(R.id.search)
         searchEV.setImeActionLabel("Buscar", KeyEvent.KEYCODE_ENTER)
         searchEV.setOnEditorActionListener(MyEditionActionListener())
         addressCardView = findViewById<CardView>(R.id.address_card_view)
         addressRecyclerView = findViewById<RecyclerView>(R.id.address_recycler_view)
         taxi_request = findViewById<Button>(R.id.taxi_request_button)
+        taxi_request?.setOnClickListener { getTaxi() }
+        val search = findViewById<EditText>(R.id.search)
+
+
         // use this setting to improve performance if you know that changes
         // in content do not change the layout size of the RecyclerView
         addressRecyclerView?.setHasFixedSize(true)
@@ -83,47 +94,65 @@ class MainActivity : AppCompatActivity() {
         val mapController = map?.controller
         mapController?.setCenter(startGp)
         mapController?.setZoom(17)
-        // check access location permission
-        if (ContextCompat.checkSelfPermission(this,
 
-                Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
+        var mIntent = intent
+        clientId = mIntent.getStringExtra("client_id")
 
-            // Should we show an explanation?
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.ACCESS_FINE_LOCATION)) {
+        val geocoderBtn = findViewById<ImageButton>(R.id.geocoder_btn)
+        geocoderBtn.setOnClickListener{
+            locationName = search.text.toString() + startGp.latitude +
+                    ", " + startGp.longitude
 
-                // Show an expanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
-
-            } else {
-
-                // No explanation needed, we can request the permission.
-                ActivityCompat.requestPermissions(this,
-                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                        MY_PERMISSIONS_REQUEST_LOCATION)
-            }
-
-        } else {
-
-            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val isGPSEnable = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-            if (isGPSEnable) {
-                //Request location updates:
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME, MIN_DISTANCE, locationListener)
-            } else {
-
-                Log.d("activity","gps not enable")
-                enableLocationSettings()
-            }
-
-            val startPoint = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            if (startPoint !== null) {
-                startGp = GeoPoint(startPoint)
-                mapController?.setCenter(startGp)
-            }
+            if (locationName !== "")
+                executeFromLocationNameTask()
         }
+
+        // check access location permission
+        try {
+            if (ContextCompat.checkSelfPermission(this,
+
+                    Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+
+                // Should we show an explanation?
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                        Manifest.permission.ACCESS_FINE_LOCATION)) {
+
+                    // Show an expanation to the user *asynchronously* -- don't block
+                    // this thread waiting for the user's response! After the user
+                    // sees the explanation, try again to request the permission.
+
+                } else {
+
+                    // No explanation needed, we can request the permission.
+                    ActivityCompat.requestPermissions(this,
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                            MY_PERMISSIONS_REQUEST_LOCATION)
+                }
+
+            } else {
+
+                val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                val isGPSEnable = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                if (isGPSEnable) {
+                    //Request location updates:
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME, MIN_DISTANCE, locationListener)
+                } else {
+
+                    Log.d("activity","gps not enable")
+                    enableLocationSettings()
+                }
+
+                val startPoint = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                if (startPoint !== null) {
+                    startGp = GeoPoint(startPoint)
+                    mapController?.setCenter(startGp)
+                }
+            }
+        } catch (e: Exception) {
+            Log.d("activity",String.format("exception on main activity: %s ", e.message))
+        }
+
 
     }
 
@@ -155,6 +184,8 @@ class MainActivity : AppCompatActivity() {
 
                     // permission denied, boo! Disable the
                     // functionality that depends on this permission.
+                    Toast.makeText(this, "Permiso denegado", Toast.LENGTH_SHORT).show()
+
 
                 }
                 return
@@ -236,7 +267,7 @@ class MainActivity : AppCompatActivity() {
         override fun doInBackground(vararg params: Context?): List<Address> {
             val geoNominatim = GeocoderNominatim(Locale.getDefault(), System.getProperty("http.agent"))
             //uncomment for use own server
-            //geoNominatim.setService(NOMINATIM_SERVICE_URL)
+            //geoNominatim.setService(Env.NOMINATIM_SERVER_URL)
             return geoNominatim.getFromLocationName(locationName,10)
         }
 
@@ -286,7 +317,7 @@ class MainActivity : AppCompatActivity() {
                 wayPoints.add(startGp)
                 wayPoints.add(endGp as GeoPoint)
                 //uncomment for use own server
-                //roadManager.setService(ROUTE_SERVICE_URL)
+                //roadManager.setService(Env.OSRM_SERVER_URL)
                 val road = roadManager.getRoad(wayPoints)
                 return road
             }
@@ -297,6 +328,7 @@ class MainActivity : AppCompatActivity() {
         override fun onPostExecute(result: Road?) {
             super.onPostExecute(result)
             if (result != null) {
+                currentRoad = result
                 drawRoad(result)
                 taxi_request?.visibility = View.VISIBLE
             }
@@ -319,5 +351,94 @@ class MainActivity : AppCompatActivity() {
 
         map?.controller?.setCenter(startGp)
     }
+
+    private fun getTaxi() {
+        val client = OkHttpClient.Builder()
+                .addInterceptor(MyInterceptor())
+                .build()
+
+        //route request to orsm server
+        val retrofit = Retrofit.Builder()
+                .baseUrl(Env.API_BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .client(client)
+                .build()
+        serverAPI = retrofit.create(ServerAPI::class.java)
+        val jsonObject = getRoadJsonObject()
+        val serverCall = serverAPI?.createRoute(jsonObject)
+
+        serverCall?.enqueue(object: Callback<JsonObject>{
+            override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
+                Log.d("server response", "Failed")
+                Toast.makeText(applicationContext, "fail to post on server", Toast.LENGTH_SHORT).show()
+
+            }
+
+            override fun onResponse(call: Call<JsonObject>?, response: Response<JsonObject>?) {
+               Log.d("server response", String.format("Server response %s",
+                       response.toString()))
+                if (response?.code()!! >= 200) {
+                    Toast.makeText(applicationContext, "Server response OK", Toast.LENGTH_SHORT).show()
+
+                }
+
+
+
+            }
+
+        })
+    }
+
+    private fun getRoadJsonObject(): JsonObject {
+        val nodes = currentRoad?.mNodes
+        val json = JsonObject()
+        val jsonPoints = JsonArray()
+        val start = JsonObject()
+        val end = JsonObject()
+        val coorStart = JsonArray()
+        val coorEnd = JsonArray()
+        coorStart.add(startGp.longitude)
+        coorStart.add(startGp.latitude)
+        coorEnd.add(endGp?.longitude)
+        coorEnd.add(endGp?.longitude)
+        start.addProperty("type", "Point")
+        start.add("coordinates", coorStart)
+        end.addProperty("type", "Point")
+        end.add("coordinates", coorEnd)
+        if(nodes!=null){
+            for(n in nodes.iterator()){
+                val jsonArr = JsonArray()
+                jsonArr.add(n.mLocation.longitude)
+                jsonArr.add(n.mLocation.latitude)
+                jsonPoints.add(jsonArr)
+            }
+        }
+        json.addProperty("client", clientId)
+        json.add("start", start)
+        json.add("end", end)
+        json.add("points", jsonPoints)
+
+        return json
+    }
+
+    inner class MyInterceptor : Interceptor {
+        @Throws(IOException::class)
+        override fun intercept(chain: Interceptor.Chain): okhttp3.Response? {
+            val request = chain.request()
+
+            val t1 = System.nanoTime()
+            Log.d("activity",String.format("Sending request %s on %s%n%s",
+                    request.url(), chain.connection(), request.headers()))
+
+            val response = chain.proceed(request)
+
+            val t2 = System.nanoTime()
+            Log.d("activity", String.format("Received response for %s in %.1fms%n%s",
+                    response.request().url(), (t2 - t1) / 1e6, response.headers()))
+
+            return response
+        }
+    }
+
 
 }
