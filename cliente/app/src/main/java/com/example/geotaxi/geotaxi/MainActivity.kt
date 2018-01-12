@@ -19,8 +19,10 @@ import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.content.Intent
 import android.content.IntentSender
+import android.graphics.drawable.Drawable
 import android.location.Address
 import android.os.AsyncTask
+import android.support.v4.content.res.ResourcesCompat
 import android.support.v7.app.AlertDialog
 import android.support.v7.widget.CardView
 import android.support.v7.widget.LinearLayoutManager
@@ -73,6 +75,8 @@ class MainActivity : AppCompatActivity() {
     var mFusedLocationClient: FusedLocationProviderClient? = null
     var mLocationRequest: LocationRequest? = null
     var mLocationCallback: LocationCallback? = null
+    var onRoute = false
+    var userMarker: Marker? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         taxi_request = findViewById<Button>(R.id.taxi_request_button)
         taxi_request?.setOnClickListener { requestTaxi() }
         val search = findViewById<EditText>(R.id.search)
-
+        val userIcon = ResourcesCompat.getDrawable(resources, R.drawable.user_location, null)
 
         // use this setting to improve performance if you know that changes
         // in content do not change the layout size of the RecyclerView
@@ -104,6 +108,8 @@ class MainActivity : AppCompatActivity() {
         val mapController = map?.controller
         mapController?.setCenter(mCurrentLocation)
         mapController?.setZoom(17)
+        userMarker = Marker(map)
+        userMarker?.setIcon(userIcon)
 
         var mIntent = intent
         clientId = mIntent.getStringExtra("client_id")
@@ -183,6 +189,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun initLocationrequest() {
         createLocationRequest()
+        mLocationCallback = object: LocationCallback(){
+
+            override fun onLocationResult(locationResult: LocationResult) {
+                Log.d("activity",String.format("locations: %s ", "" + locationResult.locations.size))
+
+                for (location in locationResult.locations) {
+                    onLocationChanged(location)
+                }
+            }
+        }
         //get current location settings
         val builder = LocationSettingsRequest.Builder()
                 .addLocationRequest(mLocationRequest!!)
@@ -212,14 +228,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        mLocationCallback = object: LocationCallback(){
-
-            override fun onLocationResult(locationResult: LocationResult) {
-                for (location in locationResult.locations) {
-                    onLocationChanged(location)
-                }
-            }
-        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
@@ -260,7 +268,6 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     private fun startLocationUpdates() {
         try {
-
 
             mFusedLocationClient?.requestLocationUpdates(mLocationRequest,
                     mLocationCallback,
@@ -318,19 +325,27 @@ class MainActivity : AppCompatActivity() {
 
     private fun onLocationChanged(location: Location) {
         val currentLocation = GeoPoint(location)
-        val data = JsonObject()
-        val pos = JsonObject()
         mCurrentLocation = currentLocation
         val mapController = map?.controller
         mapController?.setCenter(currentLocation)
-        pos.addProperty("longitude", currentLocation.longitude)
-        pos.addProperty("latitude", currentLocation.latitude)
-        data.add("position", pos)
-        data.addProperty("route_id", routeId)
-        try {
-            socket.emit("POSITION", data)
-        } catch (e: Exception) {
-            Log.d("activity",String.format("exception on location change: %s ", e.message))
+        map?.getOverlays()?.remove(userMarker)
+        map?.invalidate()
+
+        userMarker?.setPosition(mCurrentLocation)
+        userMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        map?.getOverlays()?.add(userMarker)
+        if (onRoute) {
+            val data = JsonObject()
+            val pos = JsonObject()
+            pos.addProperty("longitude", currentLocation.longitude)
+            pos.addProperty("latitude", currentLocation.latitude)
+            data.add("position", pos)
+            data.addProperty("route_id", routeId)
+            try {
+                socket.emit("POSITION", data)
+            } catch (e: Exception) {
+                Log.d("activity",String.format("exception on location change: %s ", e.message))
+            }
         }
     }
 
@@ -360,7 +375,7 @@ class MainActivity : AppCompatActivity() {
         override fun doInBackground(vararg params: Context?): List<Address> {
             val geoNominatim = GeocoderNominatim(Locale.getDefault(), System.getProperty("http.agent"))
             //uncomment for use own server
-            //geoNominatim.setService(Env.NOMINATIM_SERVER_URL)
+            geoNominatim.setService(Env.NOMINATIM_SERVER_URL)
             return geoNominatim.getFromLocationName(locationName,10)
         }
 
@@ -410,7 +425,7 @@ class MainActivity : AppCompatActivity() {
                 wayPoints.add(mCurrentLocation)
                 wayPoints.add(endGp as GeoPoint)
                 //uncomment for use own server
-                //roadManager.setService(Env.OSRM_SERVER_URL)
+                roadManager.setService(Env.OSRM_SERVER_URL)
                 val road = roadManager.getRoad(wayPoints)
                 return road
             }
@@ -473,7 +488,7 @@ class MainActivity : AppCompatActivity() {
                 if (response?.code()!! >= 200 && response?.code()!! < 210) {
                     try {
                         routeId = response.body()?.get("_id")?.asString
-                        //Log.d("activity",String.format("id response %s ", clientId))
+                        onRoute = true
                         Toast.makeText(applicationContext, "Server response OK", Toast.LENGTH_SHORT).show()
                     } catch (e: Exception) {
                         Log.d("activity",String.format("exception on login: %s ", e.message))
