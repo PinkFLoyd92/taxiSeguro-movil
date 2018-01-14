@@ -36,6 +36,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import io.socket.client.IO
 import io.socket.client.Socket
+import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import org.osmdroid.bonuspack.location.GeocoderNominatim
@@ -220,7 +221,9 @@ class MainActivity : AppCompatActivity() {
     private fun initLocationrequest() {
         createLocationRequest()
         mLocationCallback = object: LocationCallback(){
-
+            override fun onLocationAvailability(availability: LocationAvailability?) {
+                Log.d("Location",String.format("Available: %s ", "" + availability.toString() ))
+            }
             override fun onLocationResult(locationResult: LocationResult) {
                 Log.d("activity",String.format("locations: %s ", "" + locationResult.locations.size))
 
@@ -282,7 +285,6 @@ class MainActivity : AppCompatActivity() {
         mLocationRequest?.priority = Env.LR_PRIORITY
         mLocationRequest?.smallestDisplacement = 0F
     }
-
     @SuppressLint("MissingPermission")
     private fun locationRequest() {
         try {

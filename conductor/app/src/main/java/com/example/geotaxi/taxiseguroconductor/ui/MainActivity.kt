@@ -1,4 +1,4 @@
-package com.example.geotaxi.taxiseguroconductor
+package com.example.geotaxi.taxiseguroconductor.ui
 
 import android.Manifest
 import android.content.Context
@@ -19,18 +19,24 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import com.example.geotaxi.taxiseguroconductor.R
+import com.example.geotaxi.taxiseguroconductor.socket.SocketIODriverHandler
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
 class MainActivity : AppCompatActivity() {
+    companion object Statics {
+        val IP_SOCKET_SERVER :String = "http://192.168.43.139:9000"
+    }
     val MIN_TIME: Long = 5000
     val MIN_DISTANCE: Float = 10F
     val MY_PERMISSIONS_REQUEST_LOCATION = 1
     val locationListener = MyLocationListener()
     var currentGp: GeoPoint = GeoPoint(-2.1811931,-79.8765573)//Guayaquil
     var map: MapView? = null
+    var sockethandler = SocketIODriverHandler()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         map?.setTileSource(TileSourceFactory.MAPNIK)
         map?.setMultiTouchControls(true)
         val mapController = map?.controller
+        sockethandler.initConfiguration(this)
         mapController?.setCenter(currentGp)
         mapController?.setZoom(17)
         // check access location permission
@@ -87,7 +94,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
     override fun onRequestPermissionsResult(requestCode: Int,
                                             permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
@@ -170,4 +176,6 @@ class MainActivity : AppCompatActivity() {
         override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {}
 
     }
+
 }
+

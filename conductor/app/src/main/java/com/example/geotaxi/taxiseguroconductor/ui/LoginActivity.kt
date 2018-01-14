@@ -1,9 +1,10 @@
-package com.example.geotaxi.taxiseguroconductor
+package com.example.geotaxi.taxiseguroconductor.ui
 
 import android.content.Intent
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.widget.Button
+import com.example.geotaxi.taxiseguroconductor.R
 
 class LoginActivity : AppCompatActivity() {
 
