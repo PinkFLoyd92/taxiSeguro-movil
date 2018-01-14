@@ -66,7 +66,6 @@ class LoginActivity : AppCompatActivity() {
                 if (response?.code() == 200) {
                     try {
                         val clientId = response.body()?.get("_id")?.asString
-                        //Log.d("activity",String.format("id response %s ", clientId))
                         val intent = Intent(applicationContext, MainActivity::class.java)
                         intent.putExtra("client_id", clientId)
                         Toast.makeText(applicationContext, "Server response OK", Toast.LENGTH_SHORT).show()
