@@ -86,10 +86,16 @@ class SignupActivity : AppCompatActivity() {
 
     private fun getUserJsonObject(): JsonObject {
         val json = JsonObject()
-        val cName = name?.text.toString()
+        val cName = name?.text.toString().trim()
+        val cID = ID?.text.toString().trim()
+        val cMobile = mobile?.text.toString().trim()
+        val cUsername = username?.text.toString().trim()
         val cPassword = password?.text.toString().trim()
         val role = "client"
         json.addProperty("name", cName)
+        json.addProperty("cedula", cID)
+        json.addProperty("mobile", cMobile)
+        json.addProperty("username", cUsername)
         json.addProperty("password", cPassword)
         json.addProperty("role", role)
 
