@@ -1,5 +1,7 @@
 package com.example.geotaxi.taxiseguroconductor.config
 
+import com.google.android.gms.location.LocationRequest
+
 /**
  * Created by sebas on 1/13/18.
  */
@@ -17,5 +19,8 @@ class Env {
         val NOMINATIM_SERVER_URL = IP()  + ":80/nominatim/"
         val API_BASE_URL = IP()  + ":4000/v1/"
         val SOCKET_SERVER_URL = IP()  + ":9000/"
+        val LR_PRIORITY = LocationRequest.PRIORITY_HIGH_ACCURACY
+        val MY_PERMISSIONS_REQUEST_LOCATION = 1
+        val REQUEST_CHECK_SETTINGS = 1
     }
 }

@@ -53,8 +53,10 @@ class LoginActivity : AppCompatActivity() {
                             val clientId = response.body()?.get("_id")?.asString
                             val intent = Intent(applicationContext, MainActivity::class.java)
                             intent.putExtra("client_id", clientId)
-                            if(clientId != null)
-                                DataHandler.saveUser(applicationContext, clientId)
+                            if(clientId != null) {
+                                DataHandler.saveUser(baseContext, clientId)
+                                Log.d("RETROFIT", clientId)
+                            }
                             else {
                                 Log.d("RETROFIT", "client_id is empty.")
                             }
