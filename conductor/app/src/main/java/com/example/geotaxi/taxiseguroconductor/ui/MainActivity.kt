@@ -178,7 +178,7 @@ class MainActivity : AppCompatActivity() {
         }else {
             Log.d("ERROR - LOCATION",String.format("locations: %s ", "" + location.toString()))
         }
-        sockethandler.socket.emit("POSITION_UPDATE_USER", location)
+        sockethandler.socket.emit("POSITION - CHANGE", location)
         /*if (onRoute) {
             val data = JsonObject()
             val pos = JsonObject()

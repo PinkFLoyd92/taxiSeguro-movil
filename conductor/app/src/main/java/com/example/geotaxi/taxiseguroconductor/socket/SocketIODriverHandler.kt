@@ -50,36 +50,29 @@ class SocketIODriverHandler {
                             activity.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.VISIBLE
                         }
                     })
-                    // reusar este codigo en otras confirmaciones...
-/*                    val alertDialog = AlertDialog.Builder(activity).create()
-                    alertDialog.setTitle("NUEVA RUTA")
-                    alertDialog.setMessage(args as String);
-                    alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancelar"
-                    ) { dialog, wich ->
-                        dialog.dismiss()
-                        //socket.emit()
-                    }
-
-                    alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Aceptar") {
-                        dialog, which -> run {
-                        //Do alert actions here
-                    }
-                    }
-                    alertDialog.show()*/
-//                    val cardview : CardView = activity.findViewById<CardView>(R.id.card_view_confirm_client)
-//                    cardview.visibility = View.VISIBLE
                 }catch (exception: ExecutionException){
                     Log.d("error" , args.toString())
                 }
             }
-        }). on("CONDUCTOR_RECHAZADO", object: Emitter.Listener{
-            // Aqui llega la informacion de la ruta
+        }).on("ROUTE - POSITION CLIENT", object: Emitter.Listener {
             override fun call(vararg args: Any?) {
                 try {
-                    Log.d("Status" , args as String)
+                    val obj = args[0] as JSONObject
+                    Log.d("OBJECT: ", obj.toString())
+/*                    activity.runOnUiThread(object: Runnable {
+                        override fun run() {
+                            activity.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.VISIBLE
+                        }
+                    })*/
                 }catch (exception: ExecutionException){
                     Log.d("error" , args.toString())
                 }
+            }
+
+        }).on("ROUTE - FINISH", object: Emitter.Listener {
+            override fun call(vararg args: Any?) {
+                val obj = args[0] as JSONObject
+                Log.d("OBJECT: ", obj.toString())
             }
         })
         socket.connect()
