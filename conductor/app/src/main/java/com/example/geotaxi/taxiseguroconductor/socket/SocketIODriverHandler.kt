@@ -16,6 +16,9 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import java.util.concurrent.ExecutionException
+import org.json.JSONObject
+
+
 
 /**
  * Created by sebas on 1/11/18.
@@ -30,16 +33,23 @@ class SocketIODriverHandler {
     * */
     public fun initConfiguration(activity: Activity) {
         val id_user : String = DataHandler.getUserID(activity.baseContext)
+        val role : String = DataHandler.getUserRole(activity.baseContext)
         socket.on(Socket.EVENT_CONNECT) {
             val userInfo = JsonObject()
             userInfo.addProperty("_id", id_user)
-            userInfo.addProperty("role", "client")
+            userInfo.addProperty("role", role)
             socket.emit("SENDINFO", userInfo)
-        }.on("DRIVER REQUEST ", object: Emitter.Listener{
+        }.on("ROUTE REQUEST", object: Emitter.Listener{
             // Aqui llega la informacion de la ruta, puede o no rechazar la solicitud de ruta.
             override fun call(vararg args: Any?) {
                 try {
-                    Log.d("DRIVER REQUEST" , args as String)
+                    val obj = args[0] as JSONObject
+                    Log.d("OBJECT: ", obj.toString())
+                    activity.runOnUiThread(object: Runnable {
+                        override fun run() {
+                            activity.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.VISIBLE
+                        }
+                    })
                     // reusar este codigo en otras confirmaciones...
 /*                    val alertDialog = AlertDialog.Builder(activity).create()
                     alertDialog.setTitle("NUEVA RUTA")
@@ -56,8 +66,8 @@ class SocketIODriverHandler {
                     }
                     }
                     alertDialog.show()*/
-                    val cardview : CardView = activity.findViewById<CardView>(R.id.card_view_confirm_client)
-                    cardview.visibility = View.VISIBLE
+//                    val cardview : CardView = activity.findViewById<CardView>(R.id.card_view_confirm_client)
+//                    cardview.visibility = View.VISIBLE
                 }catch (exception: ExecutionException){
                     Log.d("error" , args.toString())
                 }

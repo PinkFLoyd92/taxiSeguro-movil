@@ -30,5 +30,9 @@ public class DataHandler {
             return preference.getString("_id", null)*/
             return User.instance._id
         }
+
+        fun getUserRole(context: Context): String {
+            return User.instance.role
+        }
     }
 }

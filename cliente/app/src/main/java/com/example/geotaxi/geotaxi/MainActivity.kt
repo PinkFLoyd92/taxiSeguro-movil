@@ -221,9 +221,6 @@ class MainActivity : AppCompatActivity() {
     private fun initLocationrequest() {
         createLocationRequest()
         mLocationCallback = object: LocationCallback(){
-            override fun onLocationAvailability(availability: LocationAvailability?) {
-                Log.d("Location",String.format("Available: %s ", "" + availability.toString() ))
-            }
             override fun onLocationResult(locationResult: LocationResult) {
                 Log.d("activity",String.format("locations: %s ", "" + locationResult.locations.size))
 
@@ -434,7 +431,7 @@ class MainActivity : AppCompatActivity() {
         override fun doInBackground(vararg params: Context?): List<Address> {
             val geoNominatim = GeocoderNominatim(Locale.getDefault(), System.getProperty("http.agent"))
             //uncomment for use own server
-            geoNominatim.setService(Env.NOMINATIM_SERVER_URL)
+            // geoNominatim.setService(Env.NOMINATIM_SERVER_URL)
             var addresses = listOf<Address>()
             try {
                 addresses = geoNominatim.getFromLocationName(locationName,10, -1.97166,
@@ -559,6 +556,12 @@ class MainActivity : AppCompatActivity() {
                 if (response?.code()!! >= 200 && response?.code()!! < 210) {
                     try {
                         routeId = response.body()?.get("_id")?.asString
+//                        val routePayload : JsonObject = JsonObject()
+//                        routePayload.addProperty("Start", mCurrentLocation.toDoubleString())
+//                        routePayload.addProperty("End", endGp!!.toDoubleString())
+//                        routePayload.addProperty("routeId", routeId)
+//                        routePayload.addProperty("clientId", clientId)
+//                        socket.emit("REQUEST ROAD", routePayload)
                         onRoute = true
                         Log.d("activity",String.format("id route response %s ", response.body().toString()))
                         findViewById<LinearLayout>(R.id.edit_lLayout)

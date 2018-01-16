@@ -56,11 +56,11 @@ class MainActivity : AppCompatActivity() {
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
         setContentView(R.layout.activity_main)
         val mapController = this.initMap()
-        val mapHandler = MapHandler(mapView = map, userMarker = userMarker, driverMarker = driverMarker, mCurrentLocation = mCurrentLocation, mapController = mapController)
         driverIcon = ResourcesCompat.getDrawable(resources, R.drawable.driver, null)
         userIcon = ResourcesCompat.getDrawable(resources, R.drawable.client, null)
         driverMarker = Marker(this.map)
         driverMarker?.setIcon(driverIcon)
+        mapHandler = MapHandler(mapView = map, userMarker = userMarker, driverMarker = driverMarker, mapController = mapController)
         sockethandler.initConfiguration(this)
 
         // check access location permission
@@ -173,7 +173,11 @@ class MainActivity : AppCompatActivity() {
         Log.d("MAIN - LOCATION",String.format("locations: %s ", "" + location.toString()))
         mCurrentLocation = currentLocation
         // mapHandler?.updateUserIconOnMap()
-        mapHandler?.updateDriverIconOnMap()
+        if(mapHandler != null) {
+            mapHandler?.updateDriverIconOnMap(currentLocation)
+        }else {
+            Log.d("ERROR - LOCATION",String.format("locations: %s ", "" + location.toString()))
+        }
         sockethandler.socket.emit("POSITION_UPDATE_USER", location)
         /*if (onRoute) {
             val data = JsonObject()
