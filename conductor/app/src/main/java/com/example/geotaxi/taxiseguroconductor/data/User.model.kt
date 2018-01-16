@@ -6,7 +6,8 @@ package com.example.geotaxi.taxiseguroconductor.data
 class User
 private constructor() {
     var _id = ""
-    var name = ""
+    var username = ""
+    var role = ""
 
     companion object {
         val instance = User()

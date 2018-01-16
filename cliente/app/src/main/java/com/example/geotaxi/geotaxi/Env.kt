@@ -4,7 +4,7 @@ import com.google.android.gms.location.LocationRequest
 
 class Env {
     companion object {
-        const val IP = "http://192.168.0.111"
+        const val IP = "http://192.168.43.139"
         const val OSRM_SERVER_URL = IP+":5000/route/v1/car/"
         const val NOMINATIM_SERVER_URL = IP+":80/nominatim/"
         const val API_BASE_URL = IP+":4000/v1/"

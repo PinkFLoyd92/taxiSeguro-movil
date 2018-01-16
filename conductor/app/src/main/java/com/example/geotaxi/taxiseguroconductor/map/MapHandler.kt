@@ -1,5 +1,6 @@
 package com.example.geotaxi.taxiseguroconductor.map
 
+import android.util.Log
 import org.osmdroid.api.IMapController
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapController
@@ -14,36 +15,34 @@ class MapHandler {
     private var map : MapView? = null
     var driverMarker: Marker? = null
     var userMarker: Marker? = null
-    var mCurrentLocation: GeoPoint? = null
     var mapController: IMapController? = null
 
     constructor(mapView: MapView?,
                 driverMarker: Marker?,
                 userMarker: Marker?,
-                mCurrentLocation: GeoPoint?,
                 mapController: IMapController?
                 ) {
         this.map = mapView
         this.driverMarker = driverMarker
         this.userMarker = userMarker
-        this.mCurrentLocation = mCurrentLocation
+        this.mapController = mapController
     }
 
-    public fun updateUserIconOnMap() {
+    public fun updateUserIconOnMap(location: GeoPoint) {
         map?.overlays?.remove(userMarker)
-        userMarker?.position = this.mCurrentLocation
+        userMarker?.position = location
         userMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         map?.overlays?.add(userMarker)
-        this.mapController?.animateTo(this.mCurrentLocation)
+        this.mapController?.animateTo(location)
         map?.invalidate()
     }
 
-    public fun updateDriverIconOnMap() {
+    public fun updateDriverIconOnMap(location: GeoPoint) {
         map?.overlays?.remove(driverMarker)
-        driverMarker?.position = this.mCurrentLocation
+        driverMarker?.position = location
         driverMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         map?.overlays?.add(driverMarker)
-        this.mapController?.animateTo(this.mCurrentLocation)
+        this.mapController?.animateTo(location)
         map?.invalidate()
     }
 }

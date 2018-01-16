@@ -10,6 +10,7 @@ import android.widget.Toast
 import com.example.geotaxi.taxiseguroconductor.API.endpoints.LoginAPI
 import com.example.geotaxi.taxiseguroconductor.R
 import com.example.geotaxi.taxiseguroconductor.data.DataHandler
+import com.example.geotaxi.taxiseguroconductor.data.User
 import com.google.gson.JsonObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -51,10 +52,18 @@ class LoginActivity : AppCompatActivity() {
                     if (response?.code() == 200) {
                         try {
                             val clientId = response.body()?.get("_id")?.asString
+                            val username = response.body()?.get("username")?.asString
+                            val role = response.body()?.get("role")?.asString
                             val intent = Intent(applicationContext, MainActivity::class.java)
                             intent.putExtra("client_id", clientId)
+                            if(username != null) {
+                                User.instance.username = username
+                            }
                             if(clientId != null) {
+                                User.instance._id = clientId
                                 DataHandler.saveUser(baseContext, clientId)
+                                if(role != null)
+                                    User.instance.role = role
                                 Log.d("RETROFIT", clientId)
                             }
                             else {
