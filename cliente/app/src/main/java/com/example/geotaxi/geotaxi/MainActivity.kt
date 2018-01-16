@@ -36,7 +36,6 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import io.socket.client.IO
 import io.socket.client.Socket
-import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import org.osmdroid.bonuspack.location.GeocoderNominatim
@@ -228,11 +227,6 @@ class MainActivity : AppCompatActivity() {
                 Log.d("activity",String.format("locations: %s ", "" + locationResult.locations.size))
 
                 onLocationChanged(locationResult.lastLocation)
-            }
-
-            override fun onLocationAvailability(p0: LocationAvailability?) {
-                super.onLocationAvailability(p0)
-                Log.d("activity",String.format("availability %s", p0?.toString()))
             }
         }
         //get current location settings
