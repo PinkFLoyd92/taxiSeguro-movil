@@ -3,7 +3,9 @@ package com.example.geotaxi.taxiseguroconductor.map
 import android.app.Activity
 import android.content.Context
 import android.os.AsyncTask
+import android.support.v4.content.res.ResourcesCompat
 import android.util.Log
+import com.example.geotaxi.taxiseguroconductor.R
 import com.example.geotaxi.taxiseguroconductor.config.Env
 import com.example.geotaxi.taxiseguroconductor.data.Route
 import org.osmdroid.api.IMapController
@@ -110,6 +112,5 @@ class MapHandler {
         map?.zoomToBoundingBox(road.mBoundingBox, true)
         map?.invalidate()
     }
-
 
 }
