@@ -1,13 +1,10 @@
 package com.example.geotaxi.taxiseguroconductor.socket
 
 import android.app.Activity
-import android.app.AlertDialog
-import android.content.Context
 import android.location.Location
 import android.support.v7.widget.CardView
 import android.util.Log
 import android.view.View
-import android.widget.Button
 import android.widget.TextView
 import com.example.geotaxi.taxiseguroconductor.R
 import com.example.geotaxi.taxiseguroconductor.config.Env
@@ -15,7 +12,6 @@ import com.example.geotaxi.taxiseguroconductor.data.Client
 import com.example.geotaxi.taxiseguroconductor.data.DataHandler
 import com.example.geotaxi.taxiseguroconductor.data.Route
 import com.example.geotaxi.taxiseguroconductor.map.MapHandler
-import com.example.geotaxi.taxiseguroconductor.ui.MainActivity
 import com.google.gson.JsonObject
 import io.socket.client.IO
 import io.socket.client.Socket
