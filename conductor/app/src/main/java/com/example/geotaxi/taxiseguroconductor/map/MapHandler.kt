@@ -3,9 +3,7 @@ package com.example.geotaxi.taxiseguroconductor.map
 import android.app.Activity
 import android.content.Context
 import android.os.AsyncTask
-import android.support.v4.content.res.ResourcesCompat
 import android.util.Log
-import com.example.geotaxi.taxiseguroconductor.R
 import com.example.geotaxi.taxiseguroconductor.config.Env
 import com.example.geotaxi.taxiseguroconductor.data.Route
 import org.osmdroid.api.IMapController
@@ -13,7 +11,6 @@ import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
@@ -24,25 +21,25 @@ import org.osmdroid.views.overlay.Marker
 class MapHandler {
     private var map : MapView? = null
     var driverMarker: Marker? = null
-    var userMarker: Marker? = null
+    var clientMarker: Marker? = null
     var mapController: IMapController? = null
 
     constructor(mapView: MapView?,
                 driverMarker: Marker?,
-                userMarker: Marker?,
+                clientMarker: Marker?,
                 mapController: IMapController?
                 ) {
         this.map = mapView
         this.driverMarker = driverMarker
-        this.userMarker = userMarker
+        this.clientMarker = clientMarker
         this.mapController = mapController
     }
 
-    public fun updateUserIconOnMap(location: GeoPoint) {
-        map?.overlays?.remove(userMarker)
-        userMarker?.position = location
-        userMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        map?.overlays?.add(userMarker)
+    public fun updateClientIconOnMap(location: GeoPoint) {
+        map?.overlays?.remove(clientMarker)
+        clientMarker?.position = location
+        clientMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        map?.overlays?.add(clientMarker)
         this.mapController?.animateTo(location)
         map?.invalidate()
     }
@@ -113,5 +110,6 @@ class MapHandler {
         map?.zoomToBoundingBox(road.mBoundingBox, true)
         map?.invalidate()
     }
+
 
 }
