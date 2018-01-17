@@ -1,4 +1,4 @@
-package com.example.geotaxi.geotaxi
+package com.example.geotaxi.geotaxi.ui
 
 import android.location.Address
 import android.support.v7.widget.CardView
@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import com.example.geotaxi.geotaxi.R
 
 class AddressListViewAdapter(dataset: List<Address>, rVClickListener: View.OnClickListener) : RecyclerView.Adapter<AddressListViewAdapter.Companion.ViewHolder>() {
 

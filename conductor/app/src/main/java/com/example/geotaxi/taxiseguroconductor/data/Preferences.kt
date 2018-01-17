@@ -9,7 +9,7 @@ import com.example.geotaxi.taxiseguroconductor.ui.MainActivity
  * Created by sebas on 1/14/18.
  */
 
-public class DataHandler {
+class DataHandler {
 
     companion object {
         fun pref(context : Context) : SharedPreferences {
