@@ -1,4 +1,4 @@
-package com.example.geotaxi.geotaxi.ui
+package com.example.geotaxi.geotaxi.ui.adapter
 
 import android.location.Address
 import android.support.v7.widget.CardView
