@@ -15,6 +15,7 @@ import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v4.content.res.ResourcesCompat
 import android.support.v7.app.AlertDialog
+import android.support.v7.widget.CardView
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -46,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     var driverIcon : Drawable? = null
     var userIcon : Drawable? = null
     var driverMarker: Marker? = null
-    var userMarker: Marker? = null
+    var clientMarker: Marker? = null
     var onRoute = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,8 +61,8 @@ class MainActivity : AppCompatActivity() {
         userIcon = ResourcesCompat.getDrawable(resources, R.drawable.client, null)
         driverMarker = Marker(this.map)
         driverMarker?.setIcon(driverIcon)
-        mapHandler = MapHandler(mapView = map, userMarker = userMarker, driverMarker = driverMarker, mapController = mapController)
-        sockethandler.initConfiguration(this)
+        mapHandler = MapHandler(mapView = map, clientMarker = clientMarker, driverMarker = driverMarker, mapController = mapController)
+        sockethandler.initConfiguration(this, mapHandler as MapHandler)
 
         // check access location permission
         if (ContextCompat.checkSelfPermission(this,
@@ -279,10 +280,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     public fun acceptRoute(view : View) {
-
+        this.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.GONE
     }
 
-    public fun rejectRoute(view : View) {
-    }
 }
 
