@@ -3,6 +3,7 @@ package com.example.geotaxi.taxiseguroconductor.socket
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
+import android.location.Location
 import android.support.v7.widget.CardView
 import android.util.Log
 import android.view.View
@@ -10,6 +11,7 @@ import android.widget.Button
 import com.example.geotaxi.taxiseguroconductor.R
 import com.example.geotaxi.taxiseguroconductor.config.Env
 import com.example.geotaxi.taxiseguroconductor.data.DataHandler
+import com.example.geotaxi.taxiseguroconductor.map.MapHandler
 import com.example.geotaxi.taxiseguroconductor.ui.MainActivity
 import com.google.gson.JsonObject
 import io.socket.client.IO
@@ -17,7 +19,7 @@ import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import java.util.concurrent.ExecutionException
 import org.json.JSONObject
-
+import org.osmdroid.util.GeoPoint
 
 
 /**
@@ -31,7 +33,7 @@ class SocketIODriverHandler {
     *   @EVENT_CONNECT: We emit the userInfo, we pick the ID from
     *   the SharedPreferences.
     * */
-    public fun initConfiguration(activity: Activity) {
+    public fun initConfiguration(activity: Activity, mapHandler: MapHandler) {
         val id_user : String = DataHandler.getUserID(activity.baseContext)
         val role : String = DataHandler.getUserRole(activity.baseContext)
         socket.on(Socket.EVENT_CONNECT) {
@@ -45,6 +47,18 @@ class SocketIODriverHandler {
                 try {
                     val obj = args[0] as JSONObject
                     Log.d("OBJECT: ", obj.toString())
+                    Log.d("OBJECT USER ID", obj.getJSONObject("user").getString("_id"))
+                    Log.d("OBJECT ROUTE START", obj.getJSONObject("user").getString("_id"))
+                    // Executing mapHandler task
+                    val startLoc: Location = Location("")
+                    startLoc.latitude  = obj.getJSONObject("route").getJSONObject("start").getJSONArray("coordinates").get(1) as Double
+                    startLoc.longitude  = obj.getJSONObject("route").getJSONObject("start").getJSONArray("coordinates").get(0) as Double
+                    val endLoc: Location = Location("")
+                    endLoc.latitude  = obj.getJSONObject("route").getJSONObject("end").getJSONArray("coordinates").get(1) as Double
+                    endLoc.longitude  = obj.getJSONObject("route").getJSONObject("end").getJSONArray("coordinates").get(0) as Double
+                    val start = GeoPoint(startLoc)
+                    val end = GeoPoint(endLoc)
+                    mapHandler.executeRoadTask(activity, start, end)
                     activity.runOnUiThread(object: Runnable {
                         override fun run() {
                             activity.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.VISIBLE

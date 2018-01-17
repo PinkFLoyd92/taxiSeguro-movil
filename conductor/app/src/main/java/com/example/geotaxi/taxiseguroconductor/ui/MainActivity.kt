@@ -61,7 +61,7 @@ class MainActivity : AppCompatActivity() {
         driverMarker = Marker(this.map)
         driverMarker?.setIcon(driverIcon)
         mapHandler = MapHandler(mapView = map, userMarker = userMarker, driverMarker = driverMarker, mapController = mapController)
-        sockethandler.initConfiguration(this)
+        sockethandler.initConfiguration(this, mapHandler as MapHandler)
 
         // check access location permission
         if (ContextCompat.checkSelfPermission(this,

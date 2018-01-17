@@ -599,7 +599,7 @@ class MainActivity : AppCompatActivity() {
         coorStart.add(mCurrentLocation.longitude)
         coorStart.add(mCurrentLocation.latitude)
         coorEnd.add(endGp?.longitude)
-        coorEnd.add(endGp?.longitude)
+        coorEnd.add(endGp?.latitude)
         start.addProperty("type", "Point")
         start.add("coordinates", coorStart)
         end.addProperty("type", "Point")
