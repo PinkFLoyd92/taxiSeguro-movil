@@ -53,11 +53,15 @@ class LoginActivity : AppCompatActivity() {
                         try {
                             val clientId = response.body()?.get("_id")?.asString
                             val username = response.body()?.get("username")?.asString
+                            val name = response.body()?.get("name")?.asString
                             val role = response.body()?.get("role")?.asString
                             val intent = Intent(applicationContext, MainActivity::class.java)
                             intent.putExtra("client_id", clientId)
                             if(username != null) {
                                 User.instance.username = username
+                            }
+                            if(name != null) {
+                                User.instance.name = name
                             }
                             if(clientId != null) {
                                 User.instance._id = clientId

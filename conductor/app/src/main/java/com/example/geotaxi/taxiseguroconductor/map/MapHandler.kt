@@ -23,16 +23,19 @@ class MapHandler {
     var driverMarker: Marker? = null
     var clientMarker: Marker? = null
     var mapController: IMapController? = null
+    var mCurrentLocation: GeoPoint? = null
 
     constructor(mapView: MapView?,
                 driverMarker: Marker?,
                 clientMarker: Marker?,
-                mapController: IMapController?
+                mapController: IMapController?,
+                mCurrentLocation: GeoPoint?
                 ) {
         this.map = mapView
         this.driverMarker = driverMarker
         this.clientMarker = clientMarker
         this.mapController = mapController
+        this.mCurrentLocation = mCurrentLocation
     }
 
     public fun updateClientIconOnMap(location: GeoPoint) {

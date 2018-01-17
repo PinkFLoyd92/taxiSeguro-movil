@@ -328,6 +328,7 @@ class MainActivity : AppCompatActivity() {
             pos.addProperty("latitude", currentLocation.latitude)
             data.add("position", pos)
             data.addProperty("route_id", routeId)
+            data.addProperty("role", "client")
             try {
                 socket.emit("POSITION", data)
             } catch (e: Exception) {
