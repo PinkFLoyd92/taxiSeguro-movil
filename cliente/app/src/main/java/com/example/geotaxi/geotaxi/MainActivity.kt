@@ -322,6 +322,7 @@ class MainActivity : AppCompatActivity() {
             pos.addProperty("latitude", currentLocation.latitude)
             data.add("position", pos)
             data.addProperty("route_id", routeId)
+            data.addProperty("role", "client")
             try {
                 socket.emit("POSITION", data)
             } catch (e: Exception) {
@@ -593,7 +594,7 @@ class MainActivity : AppCompatActivity() {
         coorStart.add(mCurrentLocation.longitude)
         coorStart.add(mCurrentLocation.latitude)
         coorEnd.add(endGp?.longitude)
-        coorEnd.add(endGp?.longitude)
+        coorEnd.add(endGp?.latitude)
         start.addProperty("type", "Point")
         start.add("coordinates", coorStart)
         end.addProperty("type", "Point")

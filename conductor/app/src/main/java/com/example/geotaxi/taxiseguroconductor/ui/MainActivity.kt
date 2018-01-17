@@ -15,6 +15,7 @@ import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v4.content.res.ResourcesCompat
 import android.support.v7.app.AlertDialog
+import android.support.v7.widget.CardView
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -24,10 +25,13 @@ import com.example.geotaxi.taxiseguroconductor.R
 import com.example.geotaxi.taxiseguroconductor.config.Env
 import com.example.geotaxi.taxiseguroconductor.config.GeoConstant
 import com.example.geotaxi.taxiseguroconductor.config.GeoConstant.Companion.MY_PERMISSIONS_REQUEST_LOCATION
+import com.example.geotaxi.taxiseguroconductor.data.Route
+import com.example.geotaxi.taxiseguroconductor.data.User
 import com.example.geotaxi.taxiseguroconductor.map.MapHandler
 import com.example.geotaxi.taxiseguroconductor.socket.SocketIODriverHandler
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
+import com.google.gson.JsonObject
 import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -36,7 +40,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
 class MainActivity : AppCompatActivity() {
-    var mCurrentLocation: GeoPoint? = GeoPoint(-2.1811931,-79.8765573)// Position of the user.
+    var mCurrentLocation: GeoPoint? = GeoPoint(-2.1811931,-79.8765573)// Default Position
     var map: MapView? = null
     var mapHandler: MapHandler? = null
     var sockethandler = SocketIODriverHandler()
@@ -46,7 +50,7 @@ class MainActivity : AppCompatActivity() {
     var driverIcon : Drawable? = null
     var userIcon : Drawable? = null
     var driverMarker: Marker? = null
-    var userMarker: Marker? = null
+    var clientMarker: Marker? = null
     var onRoute = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,8 +64,8 @@ class MainActivity : AppCompatActivity() {
         userIcon = ResourcesCompat.getDrawable(resources, R.drawable.client, null)
         driverMarker = Marker(this.map)
         driverMarker?.setIcon(driverIcon)
-        mapHandler = MapHandler(mapView = map, userMarker = userMarker, driverMarker = driverMarker, mapController = mapController)
-        sockethandler.initConfiguration(this)
+        mapHandler = MapHandler(mapView = map, clientMarker = clientMarker, driverMarker = driverMarker, mapController = mapController, mCurrentLocation = mCurrentLocation)
+        sockethandler.initConfiguration(this, mapHandler as MapHandler)
 
         // check access location permission
         if (ContextCompat.checkSelfPermission(this,
@@ -169,29 +173,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onLocationChanged(location: Location) {
-        val currentLocation = GeoPoint(location)
         Log.d("MAIN - LOCATION",String.format("locations: %s ", "" + location.toString()))
-        mCurrentLocation = currentLocation
-        // mapHandler?.updateUserIconOnMap()
+        mCurrentLocation?.latitude = location.latitude
+        mCurrentLocation?.longitude = location.longitude
+        mCurrentLocation?.altitude = location.altitude
         if(mapHandler != null) {
-            mapHandler?.updateDriverIconOnMap(currentLocation)
+            mapHandler?.updateDriverIconOnMap(this.mCurrentLocation as GeoPoint)
         }else {
             Log.d("ERROR - LOCATION",String.format("locations: %s ", "" + location.toString()))
         }
         sockethandler.socket.emit("POSITION - CHANGE", location)
-        /*if (onRoute) {
+        if (Route.instance.routeObj != null) {
             val data = JsonObject()
             val pos = JsonObject()
-            pos.addProperty("longitude", currentLocation.longitude)
-            pos.addProperty("latitude", currentLocation.latitude)
+            pos.addProperty("longitude", this.mCurrentLocation?.longitude)
+            pos.addProperty("latitude", this.mCurrentLocation?.latitude)
             data.add("position", pos)
-            data.addProperty("route_id", routeId)
+            data.addProperty("route_id", Route.instance._id)
+            data.addProperty("role", User.instance.role)
             try {
-                socket.emit("POSITION", data)
+                sockethandler.socket.emit("POSITION", data)
             } catch (e: Exception) {
                 Log.d("activity",String.format("exception on location change: %s ", e.message))
             }
-        } */
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int,
@@ -279,10 +284,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     public fun acceptRoute(view : View) {
-
+        this.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.GONE
     }
 
-    public fun rejectRoute(view : View) {
-    }
 }
 
