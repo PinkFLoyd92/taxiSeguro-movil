@@ -38,13 +38,17 @@ class MapHandler {
         this.mCurrentLocation = mCurrentLocation
     }
 
-    public fun updateClientIconOnMap(location: GeoPoint) {
-        map?.overlays?.remove(clientMarker)
-        clientMarker?.position = location
-        clientMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        map?.overlays?.add(clientMarker)
-        this.mapController?.animateTo(location)
-        map?.invalidate()
+    public fun updateClientIconOnMap(location: GeoPoint, activity: Activity) {
+        activity.runOnUiThread(object: Runnable {
+            override fun run() {
+                map?.overlays?.remove(clientMarker)
+                clientMarker?.position = location
+                clientMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                map?.overlays?.add(clientMarker)
+                // mapController?.animateTo(location)
+                map?.invalidate()
+            }
+        })
     }
 
     public fun updateDriverIconOnMap(location: GeoPoint) {

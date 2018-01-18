@@ -61,9 +61,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         val mapController = this.initMap()
         driverIcon = ResourcesCompat.getDrawable(resources, R.drawable.driver, null)
+        driverIcon?.setBounds(20, 20, 20, 20)
         userIcon = ResourcesCompat.getDrawable(resources, R.drawable.client, null)
+        userIcon?.setBounds(20, 20, 20, 20)
         driverMarker = Marker(this.map)
         driverMarker?.setIcon(driverIcon)
+        clientMarker = Marker(this.map)
+        clientMarker?.setIcon(userIcon)
         mapHandler = MapHandler(mapView = map, clientMarker = clientMarker, driverMarker = driverMarker, mapController = mapController, mCurrentLocation = mCurrentLocation)
         sockethandler.initConfiguration(this, mapHandler as MapHandler)
 
@@ -182,7 +186,6 @@ class MainActivity : AppCompatActivity() {
         }else {
             Log.d("ERROR - LOCATION",String.format("locations: %s ", "" + location.toString()))
         }
-        sockethandler.socket.emit("POSITION - CHANGE", location)
         if (Route.instance.routeObj != null) {
             val data = JsonObject()
             val pos = JsonObject()
@@ -191,8 +194,10 @@ class MainActivity : AppCompatActivity() {
             data.add("position", pos)
             data.addProperty("route_id", Route.instance._id)
             data.addProperty("role", User.instance.role)
+            data.addProperty("userId", User.instance._id)
             try {
                 sockethandler.socket.emit("POSITION", data)
+                this.mapHandler?.updateDriverIconOnMap(mCurrentLocation as GeoPoint)
             } catch (e: Exception) {
                 Log.d("activity",String.format("exception on location change: %s ", e.message))
             }
