@@ -23,9 +23,9 @@ class Env {
                     ||  buildDetails.contains("x86") // this includes vbox86
                     ||  buildDetails.contains("goldfish")
                     ||  buildDetails.contains("test-keys")) {
-                return "http://10.0.2.2"
+                return "http://10.0.3.2"
             }
-            return "http://192.168.43.138"
+            return "http://192.168.43.139"
         }
         val OSRM_SERVER_URL = IP() + ":5000/route/v1/car/"
         val NOMINATIM_SERVER_URL = IP()  + ":80/nominatim/"
