@@ -89,17 +89,13 @@ class SocketIODriverHandler {
             override fun call(vararg args: Any?) {
                 try {
                     val obj = args[0] as JSONObject
-                    Log.d("OBJECT: ", obj.toString())
+                    Log.d("OBJECT CLIENT POSITION: ", obj.toString())
                     val clientLoc: Location = Location("")
-                    clientLoc.latitude = obj.getJSONObject("position").getString("latitude") as Double
-                    clientLoc.longitude = obj.getJSONObject("position").getString("longitude") as Double
+                    clientLoc.latitude = obj.getJSONObject("position").getString("latitude").toDouble()
+                    clientLoc.longitude = obj.getJSONObject("position").getString("longitude").toDouble()
                     val clientGeo : GeoPoint = GeoPoint(clientLoc)
-                    mapHandler.updateClientIconOnMap(clientGeo)
-/*                    activity.runOnUiThread(object: Runnable {
-                        override fun run() {
-                            activity.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.VISIBLE
-                        }
-                    })*/
+                    mapHandler.updateClientIconOnMap(clientGeo, activity)
+                    Client.instance.position = clientGeo
                 }catch (exception: ExecutionException){
                     Log.d("error" , args.toString())
                 }
