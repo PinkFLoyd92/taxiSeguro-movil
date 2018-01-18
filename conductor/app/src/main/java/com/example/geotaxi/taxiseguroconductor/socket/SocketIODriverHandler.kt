@@ -16,6 +16,7 @@ import com.google.gson.JsonObject
 import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
+import org.json.JSONArray
 import java.util.concurrent.ExecutionException
 import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
@@ -40,7 +41,16 @@ class SocketIODriverHandler {
             userInfo.addProperty("_id", id_user)
             userInfo.addProperty("role", role)
             socket.emit("SENDINFO", userInfo)
-        }.on("ROUTE REQUEST", object: Emitter.Listener{
+            socket.emit("DRIVER - IS IN ROUTE?", userInfo)
+        } .on("DRIVER - IS IN ROUTE", object: Emitter.Listener{
+            /*
+            *  here we expect to receive the route's information, including the user's information.
+            * */
+            override fun call(vararg args: Any?) {
+                val obj = args[0] as JSONObject // here we have the route Object
+                mapHandler.initRouteAtLaunch(activity, obj)
+            }
+        }).on("ROUTE REQUEST", object: Emitter.Listener{
             // Aqui llega la informacion de la ruta, el conductor siempre acepta la peticion.
             override fun call(vararg args: Any?) {
                 try {
@@ -89,7 +99,7 @@ class SocketIODriverHandler {
             override fun call(vararg args: Any?) {
                 try {
                     val obj = args[0] as JSONObject
-                    Log.d("OBJECT CLIENT POSITION: ", obj.toString())
+                    Log.d("OBJECT CLIENT POSITION", obj.toString())
                     val clientLoc: Location = Location("")
                     clientLoc.latitude = obj.getJSONObject("position").getString("latitude").toDouble()
                     clientLoc.longitude = obj.getJSONObject("position").getString("longitude").toDouble()

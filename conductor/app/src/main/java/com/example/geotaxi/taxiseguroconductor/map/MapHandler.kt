@@ -2,10 +2,12 @@ package com.example.geotaxi.taxiseguroconductor.map
 
 import android.app.Activity
 import android.content.Context
+import android.location.Location
 import android.os.AsyncTask
 import android.util.Log
 import com.example.geotaxi.taxiseguroconductor.config.Env
 import com.example.geotaxi.taxiseguroconductor.data.Route
+import org.json.JSONObject
 import org.osmdroid.api.IMapController
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
@@ -118,5 +120,26 @@ class MapHandler {
         map?.invalidate()
     }
 
+    fun initRouteAtLaunch(activity: Activity, obj: JSONObject) {
+        val startLoc: Location? = Location("")
+        val endLoc: Location? = Location("")
+        try {
+            Log.d("OBJECT", obj.toString())
+            Route.instance._id = obj.getString("_id")
+            Route.instance.client = obj.getJSONObject("client").getString("_id")
+            Route.instance.driver = obj.getJSONObject("driver").getString("_id")
+            startLoc?.longitude = obj.getJSONObject("start").getJSONArray("coordinates").get(0) as Double
+            startLoc?.latitude = obj.getJSONObject("start").getJSONArray("coordinates").get(1)  as Double
+            Route.instance.start = GeoPoint(startLoc)
+
+            endLoc?.longitude = obj.getJSONObject("end").getJSONArray("coordinates").get(0) as Double
+            endLoc?.latitude = obj.getJSONObject("end").getJSONArray("coordinates").get(1)  as Double
+            Route.instance.end = GeoPoint(endLoc)
+
+            this.executeRoadTask(activity = activity, end = Route.instance.end as GeoPoint, start = Route.instance.start as GeoPoint)
+        }catch (e : Exception) {
+            Log.d("error", e.message)
+        }
+    }
 
 }
