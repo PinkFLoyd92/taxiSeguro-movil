@@ -56,7 +56,7 @@ class MapHandler {
     public fun updateDriverIconOnMap(location: GeoPoint) {
         map?.overlays?.remove(driverMarker)
         driverMarker?.position = location
-        driverMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        driverMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         map?.overlays?.add(driverMarker)
         this.mapController?.animateTo(location)
         map?.invalidate()

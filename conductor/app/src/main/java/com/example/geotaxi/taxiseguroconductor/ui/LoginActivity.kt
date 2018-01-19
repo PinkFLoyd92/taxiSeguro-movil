@@ -40,7 +40,8 @@ class LoginActivity : AppCompatActivity() {
 
     fun eventLogin() {
         //val serverCall : Call<JsonObject>? = loginApi.auth(this.username?.text.toString(), this.password?.text.toString().trim())
-        val serverCall : Call<JsonObject>? = loginApi.auth("q", "q")
+        val serverCall : Call<JsonObject>? = loginApi.auth(username?.text.toString().trim(),
+                password?.text.toString().trim())
         if(serverCall != null){
             serverCall?.enqueue(object: Callback<JsonObject> {
                 override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {

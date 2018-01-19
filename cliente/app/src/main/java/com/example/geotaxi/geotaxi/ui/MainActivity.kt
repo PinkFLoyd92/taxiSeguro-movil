@@ -17,12 +17,15 @@ import android.util.Log
 import android.content.Intent
 import android.content.IntentSender
 import android.graphics.Color
+import android.support.design.widget.BottomSheetBehavior
+import android.support.design.widget.BottomSheetDialog
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.content.res.ResourcesCompat
 import android.support.v7.app.AlertDialog
 import android.support.v7.widget.CardView
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
+import android.text.Layout
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.*
@@ -56,13 +59,16 @@ class MainActivity : AppCompatActivity() {
     var addressRecyclerView: RecyclerView? = null
     var addressCardView: CardView? = null
     var taxi_request: Button? = null
+    var bSheetDialog: BottomSheetDialog? = null
+    var sheetContentView: View? = null
     var currentRoad: Road? = null
-    var sockethandler = SocketIOClientHandler()
+    var sockethandler : SocketIOClientHandler? = null
     var mFusedLocationClient: FusedLocationProviderClient? = null
     var mLocationRequest: LocationRequest? = null
     var mLocationCallback: LocationCallback? = null
     var onRoute = false
     var actMenu: Menu? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,14 +82,19 @@ class MainActivity : AppCompatActivity() {
         addressCardView = findViewById(R.id.address_card_view)
         addressRecyclerView = findViewById(R.id.address_recycler_view)
         taxi_request = findViewById(R.id.taxi_request_button)
+
         val map = findViewById<MapView>(R.id.map)
         val searchEV = findViewById<EditText>(R.id.search)
         val search = findViewById<EditText>(R.id.search)
         val userIcon = ResourcesCompat.getDrawable(resources, R.drawable.user_location, null)
+        val driverIcon = ResourcesCompat.getDrawable(resources, R.mipmap.taxi_icon, null)
         val destinationIcon = ResourcesCompat.getDrawable(resources, R.drawable.location_marker, null)
         val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
         val geocoderBtn = findViewById<ImageButton>(R.id.geocoder_btn)
 
+        bSheetDialog = BottomSheetDialog(this)
+        sheetContentView = View.inflate(this, R.layout.sheet_dialog, null)
+        bSheetDialog?.setContentView(sheetContentView)
         searchEV.setImeActionLabel("Buscar", KeyEvent.KEYCODE_ENTER)
         searchEV.setOnEditorActionListener(MyEditionActionListener())
         taxi_request?.setOnClickListener { requestTaxi() }
@@ -108,10 +119,11 @@ class MainActivity : AppCompatActivity() {
                 fillAddressesRecyclerView()
         }
         mapHandler = MapHandler(mapView = map, userIcon = userIcon,
-                                    driverIcon = userIcon, destinationIcon = destinationIcon )
+                                    driverIcon = driverIcon, destinationIcon = destinationIcon )
         mapHandler?.mapController?.animateTo(mCurrentLocation)
         mapHandler?.mapController?.zoomTo(17)
-        sockethandler.initConfiguration(this)
+        sockethandler = SocketIOClientHandler(this, mapHandler!!, bSheetDialog!!)
+        sockethandler!!.initConfiguration()
 
         // check access location permission
         if (ContextCompat.checkSelfPermission(this,
@@ -139,6 +151,14 @@ class MainActivity : AppCompatActivity() {
             initLocationrequest()
         }
 
+    }
+
+    fun showBottomSheetDialog(name: String, vehiclePlate: String ) {
+        val nameTv = sheetContentView!!.findViewById<TextView>(R.id.driver_name)
+        val vehiclePlateTv = sheetContentView!!.findViewById<TextView>(R.id.vehicle_plate)
+        nameTv.text = name
+        vehiclePlateTv.text = vehiclePlate
+        bSheetDialog?.show()
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -297,7 +317,7 @@ class MainActivity : AppCompatActivity() {
     private fun onLocationChanged(location: Location) {
         val currentLocation = GeoPoint(location)
         mCurrentLocation = currentLocation
-        mapHandler?.updateUserIconOnMap(currentLocation)
+        mapHandler?.updateUserIconOnMap(this,currentLocation)
         if (onRoute) {
             val data = JsonObject()
             val pos = JsonObject()
@@ -306,8 +326,9 @@ class MainActivity : AppCompatActivity() {
             data.add("position", pos)
             data.addProperty("route_id", Route.instance._id)
             data.addProperty("role", User.instance.role)
+            data.addProperty("userId", User.instance._id)
             try {
-                sockethandler.socket.emit("POSITION", data)
+                sockethandler!!.socket.emit("POSITION", data)
             } catch (e: Exception) {
                 Log.d("activity",String.format("exception on location change: %s ", e.message))
             }
@@ -342,7 +363,7 @@ class MainActivity : AppCompatActivity() {
                 val data = JsonObject()
                 data.addProperty("route_id", Route.instance._id)
                 try {
-                    sockethandler.socket.emit("PANIC BUTTON", data)
+                    sockethandler!!.socket.emit("PANIC BUTTON", data)
                 } catch (e: Exception) {
                     Log.d("activity",String.format("exception on emit alert: %s ", e.message))
                 }
@@ -434,10 +455,10 @@ class MainActivity : AppCompatActivity() {
                     if (response?.code()!! in 200..209) {
                         try {
                             val routeId = response.body()?.get("_id")?.asString
-                            sockethandler.socket.emit("JOIN ROUTE", Route.instance._id)
                             if (routeId != null) {
                                 Route.instance._id = routeId
                             }
+                            sockethandler!!.socket.emit("JOIN ROUTE", Route.instance._id)
                             onRoute = true
                             Log.d("activity",String.format("id route response %s ", response.body().toString()))
                             findViewById<LinearLayout>(R.id.edit_lLayout)

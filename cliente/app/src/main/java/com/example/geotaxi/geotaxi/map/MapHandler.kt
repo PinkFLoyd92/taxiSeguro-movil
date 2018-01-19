@@ -1,5 +1,6 @@
 package com.example.geotaxi.geotaxi.map
 
+import android.app.Activity
 import android.graphics.drawable.Drawable
 import org.osmdroid.api.IMapController
 import org.osmdroid.bonuspack.routing.Road
@@ -45,27 +46,29 @@ class MapHandler {
         this.destinationMarker = destinationMarker
     }
 
-    fun updateUserIconOnMap(location: GeoPoint) {
-        map?.overlays?.remove(userMarker)
-        userMarker?.position = location
-        userMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        map?.overlays?.add(userMarker)
-        map?.invalidate()
+    fun updateUserIconOnMap(activity: Activity, location: GeoPoint) {
+        activity.runOnUiThread {
+            map?.overlays?.remove(userMarker)
+            userMarker?.position = location
+            userMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            map?.overlays?.add(userMarker)
+            map?.invalidate()
+        }
     }
 
-    fun updateDriverIconOnMap(location: GeoPoint) {
-        map?.overlays?.remove(driverMarker)
-        driverMarker?.position = location
-        driverMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        map?.overlays?.add(driverMarker)
-        map?.invalidate()
-    }
+    fun updateDriverIconOnMap(activity: Activity, location: GeoPoint) =
+            activity.runOnUiThread {
+                map?.overlays?.remove(driverMarker)
+                driverMarker?.position = location
+                driverMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                map?.overlays?.add(driverMarker)
+                map?.invalidate()
+            }
 
     fun drawRoad(road: Road, userPos: GeoPoint, destinationPos: GeoPoint) {
         if (!road.mNodes.isEmpty()) {
             val roadOverlay = RoadManager.buildRoadOverlay(road)
             map?.overlays?.add(roadOverlay)
-            updateUserIconOnMap(userPos)
             destinationMarker?.position = destinationPos
             destinationMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             destinationMarker?.snippet = ("%.2f".format(road.mDuration/60)) + " min"
