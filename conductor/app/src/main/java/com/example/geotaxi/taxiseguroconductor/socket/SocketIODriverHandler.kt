@@ -6,11 +6,13 @@ import android.support.v7.widget.CardView
 import android.util.Log
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
 import com.example.geotaxi.taxiseguroconductor.R
 import com.example.geotaxi.taxiseguroconductor.config.Env
 import com.example.geotaxi.taxiseguroconductor.data.Client
 import com.example.geotaxi.taxiseguroconductor.data.DataHandler
 import com.example.geotaxi.taxiseguroconductor.data.Route
+import com.example.geotaxi.taxiseguroconductor.data.User
 import com.example.geotaxi.taxiseguroconductor.map.MapHandler
 import com.google.gson.JsonObject
 import io.socket.client.IO
@@ -72,6 +74,7 @@ class SocketIODriverHandler {
                     }
                     val routeId : String = obj.getJSONObject("route").getString("_id")
                     Route.instance._id = routeId
+                    Route.instance.status = "pending"
                     clientLoc.latitude  = obj.getJSONObject("user").getJSONObject("location").getJSONArray("coordinates").get(1) as Double
                     clientLoc.longitude  = obj.getJSONObject("user").getJSONObject("location").getJSONArray("coordinates").get(0) as Double
                     startLoc.latitude  = obj.getJSONObject("route").getJSONObject("start").getJSONArray("coordinates").get(1) as Double
@@ -97,24 +100,33 @@ class SocketIODriverHandler {
             }
         }).on("ROUTE - POSITION CLIENT", object: Emitter.Listener {
             override fun call(vararg args: Any?) {
-                try {
-                    val obj = args[0] as JSONObject
-                    Log.d("OBJECT CLIENT POSITION", obj.toString())
-                    val clientLoc: Location = Location("")
-                    clientLoc.latitude = obj.getJSONObject("position").getString("latitude").toDouble()
-                    clientLoc.longitude = obj.getJSONObject("position").getString("longitude").toDouble()
-                    val clientGeo : GeoPoint = GeoPoint(clientLoc)
-                    mapHandler.updateClientIconOnMap(clientGeo, activity)
-                    Client.instance.position = clientGeo
-                }catch (exception: ExecutionException){
-                    Log.d("error" , args.toString())
+                if (Route.instance.status != "inactive") {
+                    try {
+                        val obj = args[0] as JSONObject
+                        Log.d("OBJECT CLIENT POSITION", "ROUTE - POSITION CLIENT")
+                        val clientLoc: Location = Location("")
+                        clientLoc.latitude = obj.getJSONObject("position").getString("latitude").toDouble()
+                        clientLoc.longitude = obj.getJSONObject("position").getString("longitude").toDouble()
+                        val clientGeo : GeoPoint = GeoPoint(clientLoc)
+                        mapHandler.updateClientIconOnMap(clientGeo, activity)
+                        Client.instance.position = clientGeo
+                    }catch (exception: ExecutionException){
+                        Log.d("error" , args.toString())
+                    }
                 }
             }
 
         }).on("ROUTE - FINISH", object: Emitter.Listener {
             override fun call(vararg args: Any?) {
-                val obj = args[0] as JSONObject
-                Log.d("OBJECT: ", obj.toString())
+                Log.d("OBJECT: ", "ROUTE HAS FINISHED")
+                //Route.instance.routeObj = null
+                Route.instance.status = "inactive"
+                mapHandler.clearMapOverlays()
+                //mapHandler.closeDestinationWindowInfo()
+                activity.runOnUiThread {
+                    mapHandler?.updateDriverIconOnMap(User.instance.position!!)
+                    Toast.makeText(activity, "La Ruta ha Finalizado", Toast.LENGTH_SHORT).show()
+                }
             }
         })
         socket.connect()

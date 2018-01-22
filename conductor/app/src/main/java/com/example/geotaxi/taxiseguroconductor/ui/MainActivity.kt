@@ -179,6 +179,7 @@ class MainActivity : AppCompatActivity() {
         mCurrentLocation?.latitude = location.latitude
         mCurrentLocation?.longitude = location.longitude
         mCurrentLocation?.altitude = location.altitude
+        User.instance.position = GeoPoint(location)
         if(mapHandler != null) {
             mapHandler?.updateDriverIconOnMap(this.mCurrentLocation as GeoPoint)
         }else {

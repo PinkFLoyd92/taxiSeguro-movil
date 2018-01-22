@@ -15,11 +15,11 @@ import org.osmdroid.views.overlay.gestures.RotationGestureOverlay
  * Created by dieropal on 17/01/18.
  */
 class MapHandler {
-    var map : MapView? = null
-    var driverMarker: Marker? = null
-    var userMarker: Marker? = null
-    var destinationMarker: Marker? = null
-    var mapController: IMapController? = null
+    private var map : MapView? = null
+    private var driverMarker: Marker? = null
+    private var userMarker: Marker? = null
+    private var destinationMarker: Marker? = null
+    private var mapController: IMapController? = null
 
     constructor(mapView: MapView?,
                 driverIcon: Drawable?,
@@ -65,6 +65,12 @@ class MapHandler {
                 map?.invalidate()
             }
 
+    fun animateToLocation(location: GeoPoint?, zoomLevel: Int) {
+        if (location != null) {
+            mapController?.animateTo(location)
+            mapController?.zoomTo(17)
+        }
+    }
     fun drawRoad(road: Road, userPos: GeoPoint, destinationPos: GeoPoint) {
         if (!road.mNodes.isEmpty()) {
             val roadOverlay = RoadManager.buildRoadOverlay(road)
@@ -79,5 +85,14 @@ class MapHandler {
             map?.invalidate()
         }
 
+    }
+
+    fun clearMapOverlays() {
+        map?.overlays?.clear()
+    }
+
+    fun closeDestinationWindowInfo() {
+        if (destinationMarker?.isInfoWindowShown!!)
+            destinationMarker?.closeInfoWindow()
     }
 }

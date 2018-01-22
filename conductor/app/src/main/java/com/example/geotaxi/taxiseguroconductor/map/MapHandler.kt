@@ -142,4 +142,8 @@ class MapHandler {
         }
     }
 
+    fun clearMapOverlays() {
+        map?.overlays?.clear()
+    }
+    
 }

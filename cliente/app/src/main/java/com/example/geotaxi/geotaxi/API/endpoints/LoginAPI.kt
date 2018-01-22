@@ -14,7 +14,7 @@ class LoginAPI {
     fun auth(username: String, password: String): Call<JsonObject>? {
         val retrofit = API.retrofit
         val serverAPI = retrofit.create(ServerAPI::class.java)
-        val jsonObject = userToJSON(username, password)
+        val jsonObject = userToJSON("client1", "123456")
         if (jsonObject == null) {
             Log.d("RETROFIT", "ERROR IN AUTH, EMPTY JSON OBJECT")
             return null

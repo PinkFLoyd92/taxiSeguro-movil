@@ -17,7 +17,7 @@ import android.util.Log
 import android.content.Intent
 import android.content.IntentSender
 import android.graphics.Color
-import android.support.design.widget.BottomSheetBehavior
+import android.opengl.Visibility
 import android.support.design.widget.BottomSheetDialog
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.content.res.ResourcesCompat
@@ -25,7 +25,6 @@ import android.support.v7.app.AlertDialog
 import android.support.v7.widget.CardView
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
-import android.text.Layout
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.*
@@ -52,7 +51,7 @@ class MainActivity : AppCompatActivity() {
     var geocoderApi: GeocoderNominatimAPI = GeocoderNominatimAPI()
     var roadApi: OSRMRoadAPI? = null
     var routeAPI: RouteAPI = RouteAPI()
-    var mCurrentLocation: GeoPoint = GeoPoint(-2.1811931,-79.8765573)//Guayaquil
+    var startGp: GeoPoint = GeoPoint(-2.1811931,-79.8765573)//Guayaquil
     var endGp: GeoPoint? = null
     var locationName = ""
     var mapHandler: MapHandler? = null
@@ -66,7 +65,6 @@ class MainActivity : AppCompatActivity() {
     var mFusedLocationClient: FusedLocationProviderClient? = null
     var mLocationRequest: LocationRequest? = null
     var mLocationCallback: LocationCallback? = null
-    var onRoute = false
     var actMenu: Menu? = null
 
 
@@ -92,6 +90,7 @@ class MainActivity : AppCompatActivity() {
         val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
         val geocoderBtn = findViewById<ImageButton>(R.id.geocoder_btn)
 
+        User.instance.position = startGp
         bSheetDialog = BottomSheetDialog(this)
         sheetContentView = View.inflate(this, R.layout.sheet_dialog, null)
         bSheetDialog?.setContentView(sheetContentView)
@@ -109,8 +108,7 @@ class MainActivity : AppCompatActivity() {
         // add rotation gesture
 
         fab.setOnClickListener {
-            mapHandler?.mapController?.animateTo(mCurrentLocation)
-            mapHandler?.mapController?.zoomTo(17)
+            mapHandler?.animateToLocation(location = User.instance.position, zoomLevel = 17)
         }
 
         geocoderBtn.setOnClickListener{
@@ -120,9 +118,8 @@ class MainActivity : AppCompatActivity() {
         }
         mapHandler = MapHandler(mapView = map, userIcon = userIcon,
                                     driverIcon = driverIcon, destinationIcon = destinationIcon )
-        mapHandler?.mapController?.animateTo(mCurrentLocation)
-        mapHandler?.mapController?.zoomTo(17)
-        sockethandler = SocketIOClientHandler(this, mapHandler!!, bSheetDialog!!)
+        mapHandler?.animateToLocation(location = User.instance.position, zoomLevel = 17)
+        sockethandler = SocketIOClientHandler(this, mapHandler!!)
         sockethandler!!.initConfiguration()
 
         // check access location permission
@@ -159,6 +156,12 @@ class MainActivity : AppCompatActivity() {
         nameTv.text = name
         vehiclePlateTv.text = vehiclePlate
         bSheetDialog?.show()
+    }
+
+    fun enablePanicButton() {
+        actMenu?.findItem(R.id.action_alert)?.isEnabled = true
+        actMenu?.findItem(R.id.action_alert)?.icon
+                ?.mutate()?.setTint(Color.parseColor("#E7291E"))
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -294,8 +297,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
             startLocationUpdates()
-            mapHandler?.mapController?.animateTo(mCurrentLocation)
-            mapHandler?.mapController?.zoomTo(17)
+            mapHandler?.animateToLocation(location = User.instance.position, zoomLevel = 17)
         } catch (e: Exception) {
             Log.d("activity",String.format("exception on location request: %s ", e.message))
         }
@@ -316,9 +318,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun onLocationChanged(location: Location) {
         val currentLocation = GeoPoint(location)
-        mCurrentLocation = currentLocation
+        User.instance.position = currentLocation
         mapHandler?.updateUserIconOnMap(this,currentLocation)
-        if (onRoute) {
+        if (Route.instance.status in listOf("active", "pending")) {
             val data = JsonObject()
             val pos = JsonObject()
             pos.addProperty("longitude", currentLocation.longitude)
@@ -417,27 +419,30 @@ class MainActivity : AppCompatActivity() {
             var geoPointList = geoPointStr.split(",").map { it.trim() }
             endGp = GeoPoint((geoPointList[0]).toDouble(), geoPointList[1].toDouble())
             addressCardView?.visibility = View.GONE
-            mapHandler?.map?.overlays?.clear()
+            mapHandler?.clearMapOverlays()
             //calculate and draw road on map
-            executeRoadTask()
+            val ok = executeRoadTask(User.instance.position!!, endGp!!)
+            if (ok) {
+                taxi_request?.visibility = View.VISIBLE
+            }
         }
 
     }
 
-    private  fun executeRoadTask(){
-        val roadRusult = roadApi?.getRoad(mCurrentLocation, endGp!!)
+    fun executeRoadTask(startGp: GeoPoint, endGp: GeoPoint): Boolean{
+        val roadRusult = roadApi?.getRoad(startGp, endGp!!)
         if (roadRusult != null) {
+            Route.instance.road = roadRusult
             currentRoad = roadRusult
-            mapHandler?.drawRoad(roadRusult, mCurrentLocation, endGp!!)
-            val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
-            fab.visibility = View.GONE
-            taxi_request?.visibility = View.VISIBLE
+            mapHandler?.drawRoad(roadRusult, User.instance.position!!, endGp!!)
+            return true
         }
+        return false
     }
 
     private fun requestTaxi() {
 
-        val serverCall = routeAPI.requestTaxi(mCurrentLocation, endGp!!, currentRoad!!.mNodes)
+        val serverCall = routeAPI.requestTaxi(User.instance.position!!, endGp!!, currentRoad!!.mNodes)
         if(serverCall != null){
 
             serverCall?.enqueue(object: Callback<JsonObject> {
@@ -450,29 +455,21 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onResponse(call: Call<JsonObject>?, response: Response<JsonObject>?) {
-                   Log.d("server response", String.format("Server response %s",
-                           response.toString()))
+
                     if (response?.code()!! in 200..209) {
                         try {
                             val routeId = response.body()?.get("_id")?.asString
                             if (routeId != null) {
                                 Route.instance._id = routeId
                             }
+                            Route.instance.status = "pending"
                             sockethandler!!.socket.emit("JOIN ROUTE", Route.instance._id)
-                            onRoute = true
+                            Route.instance.status = "active"
                             Log.d("activity",String.format("id route response %s ", response.body().toString()))
-                            findViewById<LinearLayout>(R.id.edit_lLayout)
-                                    .visibility = View.GONE
+                            setSearchLayoutVisibility(View.GONE)
                             taxi_request?.visibility = View.GONE
                             val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
                             fab.visibility = View.VISIBLE
-
-                            mapHandler?.mapController?.animateTo(mCurrentLocation)
-                            mapHandler?.mapController?.zoomTo(17)
-
-                            actMenu?.findItem(R.id.action_alert)?.isEnabled = true
-                            actMenu?.findItem(R.id.action_alert)?.icon
-                                    ?.mutate()?.setTint(Color.parseColor("#E7291E"))
 
                             Toast.makeText(applicationContext, "Server response OK", Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
@@ -485,6 +482,11 @@ class MainActivity : AppCompatActivity() {
         } else {
             Log.d("RETROFIT", "ServerCAll is null")
         }
+    }
+
+    fun setSearchLayoutVisibility(visibility: Int = View.VISIBLE) {
+        findViewById<LinearLayout>(R.id.edit_lLayout)
+                .visibility = visibility
     }
 
 }

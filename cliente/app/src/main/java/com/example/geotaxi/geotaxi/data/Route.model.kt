@@ -1,5 +1,6 @@
 package com.example.geotaxi.geotaxi.data
 
+import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.util.GeoPoint
 
 /**
@@ -14,7 +15,7 @@ private constructor() {
     var start : GeoPoint?= null
     var end : GeoPoint?= null
     var waypoints : ArrayList<GeoPoint>? = null
-
+    var road: Road? = null
     companion object {
         val instance = Route()
     }
