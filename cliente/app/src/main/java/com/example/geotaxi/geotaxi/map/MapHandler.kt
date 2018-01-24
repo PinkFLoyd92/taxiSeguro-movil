@@ -1,7 +1,14 @@
 package com.example.geotaxi.geotaxi.map
 
 import android.app.Activity
+import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.view.View
+import android.widget.Toast
+import com.example.geotaxi.geotaxi.R
+import com.example.geotaxi.geotaxi.data.Route
+import com.example.geotaxi.geotaxi.data.User
+import com.example.geotaxi.geotaxi.ui.MainActivity
 import org.osmdroid.api.IMapController
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
@@ -9,19 +16,30 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.gestures.RotationGestureOverlay
+import org.osmdroid.views.overlay.infowindow.InfoWindow
 
 /**
  * Created by dieropal on 17/01/18.
  */
 class MapHandler {
+    private var activity: Activity? = null
     private var map : MapView? = null
     private var driverMarker: Marker? = null
     private var userMarker: Marker? = null
     private var destinationMarker: Marker? = null
     private var mapController: IMapController? = null
+    private var roadOverlays = mutableListOf<Polyline>()
+    private var roadChosen : Road? = null
+    private var roadChosenIndex: Int = 0
+    private var ROAD_COLORS: HashMap<String, Int> = hashMapOf(
+            "chosen" to Color.BLUE,
+            "alternative" to Color.RED
+    )
 
-    constructor(mapView: MapView?,
+    constructor(activity: MainActivity,
+                mapView: MapView?,
                 driverIcon: Drawable?,
                 userIcon: Drawable?,
                 destinationIcon: Drawable?
@@ -30,40 +48,41 @@ class MapHandler {
         val userMarker = Marker(mapView)
         val driverMarker = Marker(mapView)
         val destinationMarker = Marker(mapView)
+        val mapController = mapView?.controller
 
         mRotationGestureOverlay.isEnabled = true
         mapView?.setTileSource(TileSourceFactory.MAPNIK)
         mapView?.setMultiTouchControls(true)
         mapView?.overlays?.add(mRotationGestureOverlay)
+        mapController?.setCenter(User.instance.position)
+        mapController?.setZoom(17)
         userMarker?.setIcon(userIcon)
         driverMarker?.setIcon(driverIcon)
         destinationMarker?.setIcon(destinationIcon)
 
+        this.activity = activity
         this.map = mapView
-        this.mapController = mapView?.controller
+        this.mapController = mapController
         this.driverMarker = driverMarker
         this.userMarker = userMarker
         this.destinationMarker = destinationMarker
     }
 
-    fun updateUserIconOnMap(activity: Activity, location: GeoPoint) {
-        activity.runOnUiThread {
-            map?.overlays?.remove(userMarker)
-            userMarker?.position = location
-            userMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            map?.overlays?.add(userMarker)
-            map?.invalidate()
-        }
+    fun updateUserIconOnMap(location: GeoPoint) {
+        map?.overlays?.remove(userMarker)
+        userMarker?.position = location
+        userMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        map?.overlays?.add(userMarker)
+        map?.invalidate()
     }
 
-    fun updateDriverIconOnMap(activity: Activity, location: GeoPoint) =
-            activity.runOnUiThread {
-                map?.overlays?.remove(driverMarker)
-                driverMarker?.position = location
-                driverMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                map?.overlays?.add(driverMarker)
-                map?.invalidate()
-            }
+    fun updateDriverIconOnMap(location: GeoPoint) {
+        map?.overlays?.remove(driverMarker)
+        driverMarker?.position = location
+        driverMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        map?.overlays?.add(driverMarker)
+        map?.invalidate()
+    }
 
     fun animateToLocation(location: GeoPoint?, zoomLevel: Int) {
         if (location != null) {
@@ -74,21 +93,111 @@ class MapHandler {
     fun drawRoad(road: Road, userPos: GeoPoint, destinationPos: GeoPoint) {
         if (!road.mNodes.isEmpty()) {
             val roadOverlay = RoadManager.buildRoadOverlay(road)
+            roadOverlay.setOnClickListener { polyline, mapView, eventPos ->
+                Toast.makeText(mapView.getContext(), "polyline with " + polyline.points.size + "pts was tapped", Toast.LENGTH_LONG).show();
+                polyline.color = Color.RED
+                false
+            }
+            updateUserIconOnMap(userPos)
+            addDestMarker(destinationPos)
             map?.overlays?.add(roadOverlay)
-            destinationMarker?.position = destinationPos
-            destinationMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            destinationMarker?.snippet = ("%.2f".format(road.mDuration/60)) + " min"
-            destinationMarker?.subDescription = ("%.2f".format(road.mLength)) + " km"
-            map?.overlays?.add(destinationMarker)
-            destinationMarker?.showInfoWindow()
             map?.zoomToBoundingBox(road.mBoundingBox, true)
             map?.invalidate()
         }
+    }
 
+    fun drawRoads(roads: kotlin.Array<out Road>) {
+        Marker.ENABLE_TEXT_LABELS_WHEN_NO_IMAGE = true
+        var roadIndex = 0
+        var roadColor = ROAD_COLORS["chosen"]
+        if (roadOverlays.isNotEmpty()) {
+            roadOverlays.clear()
+        }
+        roads.forEach { road ->
+
+            if (road.mNodes.isNotEmpty()) {
+
+                val roadOverlay = RoadManager.buildRoadOverlay(road)
+                roadOverlay.width = 6F
+                if (roadIndex != Route.instance.currentRoadIndex) {
+                    roadColor = ROAD_COLORS["alternative"]
+                } else {
+                    roadColor = ROAD_COLORS["chosen"]
+                }
+                roadOverlays.add(roadOverlay)
+
+                roadOverlay.color = roadColor!!
+
+                val midIndex = if (road.mNodes.size%2 == 0) {
+                    (road.mNodes.size/2) - 1
+                } else {
+                    ((road.mNodes.size + 1)/2) - 1
+                }
+                val infoPos = road.mNodes[midIndex].mLocation
+                val duration = ("%.2f".format(road.mDuration/60)) + " min"
+                val distance = ("%.2f".format(road.mLength)) + " km"
+
+                roadOverlay.infoWindow = MyInfoWindow(R.layout.info_window, map!!,
+                        title = duration, description = distance)
+
+                roadOverlay.infoWindow.view.setOnClickListener{ v: View  ->
+                    onRoadChosen(roadOverlay, road)
+                }
+                roadOverlay.infoWindow.view.setOnLongClickListener { v: View ->
+                    roadOverlay.infoWindow.close()
+                    true
+                }
+                roadOverlay.setOnClickListener{ polyline, mapView, eventPos ->
+                    onRoadChosen(roadOverlay, road)
+                    roadOverlay.showInfoWindow(eventPos)
+                    true
+                }
+                roadOverlay.showInfoWindow(infoPos)//open(roadOverlay, infoPos, 2,2)
+                map?.overlays?.add(roadOverlay)
+                map?.zoomToBoundingBox(road.mBoundingBox, true)
+                map?.invalidate()
+            }
+            roadIndex += 1
+        }
+    }
+
+    private fun onRoadChosen(roadOverlay: Polyline, road: Road) {
+        var indx = 0
+        roadOverlay.color = ROAD_COLORS["chosen"]!!
+        roadOverlays.forEach {
+            if (it != roadOverlay) {
+                it.color = ROAD_COLORS["alternative"]!!
+            } else {
+                roadChosenIndex = indx
+            }
+            indx+= 1
+        }
+        roadChosen = road
+    }
+
+    fun getRoadChosen(): Road {
+        return roadChosen!!
+    }
+
+    fun getRoadChosenIndex(): Int {
+        return roadChosenIndex
+    }
+    private fun addDestMarker(destPos: GeoPoint) {
+
+        destinationMarker?.position = destPos
+        destinationMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        //infoMarker.snippet = ("%.2f".format(road.mDuration/60)) + " min"
+        //infoMarker.subDescription = ("%.2f".format(road.mLength)) + " km"
+        //infoMarker.title = "."
+        //infoMarker.setIcon(null)
+        //infoMarker.infoWindow = infoWindow
+        map?.overlays?.add(destinationMarker)
+        //infoMarker.infoWindow.open(infoMarker, infoPos, 2,2)
     }
 
     fun clearMapOverlays() {
         map?.overlays?.clear()
+        InfoWindow.closeAllInfoWindowsOn(map)
     }
 
     fun closeDestinationWindowInfo() {

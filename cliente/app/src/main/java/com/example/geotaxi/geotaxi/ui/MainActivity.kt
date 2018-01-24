@@ -17,7 +17,6 @@ import android.util.Log
 import android.content.Intent
 import android.content.IntentSender
 import android.graphics.Color
-import android.opengl.Visibility
 import android.support.design.widget.BottomSheetDialog
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.content.res.ResourcesCompat
@@ -41,7 +40,6 @@ import com.example.geotaxi.geotaxi.ui.adapter.AddressListViewAdapter
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.gson.JsonObject
-import org.osmdroid.bonuspack.routing.Road
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -58,9 +56,10 @@ class MainActivity : AppCompatActivity() {
     var addressRecyclerView: RecyclerView? = null
     var addressCardView: CardView? = null
     var taxi_request: Button? = null
+    var choose_route: Button? = null
+    var fabRoutes: FloatingActionButton? = null
     var bSheetDialog: BottomSheetDialog? = null
     var sheetContentView: View? = null
-    var currentRoad: Road? = null
     var sockethandler : SocketIOClientHandler? = null
     var mFusedLocationClient: FusedLocationProviderClient? = null
     var mLocationRequest: LocationRequest? = null
@@ -80,6 +79,8 @@ class MainActivity : AppCompatActivity() {
         addressCardView = findViewById(R.id.address_card_view)
         addressRecyclerView = findViewById(R.id.address_recycler_view)
         taxi_request = findViewById(R.id.taxi_request_button)
+        choose_route = findViewById(R.id.choose_route_btn)
+        fabRoutes = findViewById(R.id.fab_routes)
 
         val map = findViewById<MapView>(R.id.map)
         val searchEV = findViewById<EditText>(R.id.search)
@@ -96,7 +97,6 @@ class MainActivity : AppCompatActivity() {
         bSheetDialog?.setContentView(sheetContentView)
         searchEV.setImeActionLabel("Buscar", KeyEvent.KEYCODE_ENTER)
         searchEV.setOnEditorActionListener(MyEditionActionListener())
-        taxi_request?.setOnClickListener { requestTaxi() }
         setOnTouchListener(search)
 
         // use this setting to improve performance if you know that changes
@@ -107,20 +107,27 @@ class MainActivity : AppCompatActivity() {
         addressRecyclerView?.layoutManager = mLayoutManager
         // add rotation gesture
 
-        fab.setOnClickListener {
-            mapHandler?.animateToLocation(location = User.instance.position, zoomLevel = 17)
-        }
-
         geocoderBtn.setOnClickListener{
             locationName = search.text.toString().trim()
             if (locationName !== "")
                 fillAddressesRecyclerView()
         }
-        mapHandler = MapHandler(mapView = map, userIcon = userIcon,
+        mapHandler = MapHandler(this, mapView = map, userIcon = userIcon,
                                     driverIcon = driverIcon, destinationIcon = destinationIcon )
-        mapHandler?.animateToLocation(location = User.instance.position, zoomLevel = 17)
         sockethandler = SocketIOClientHandler(this, mapHandler!!)
         sockethandler!!.initConfiguration()
+
+        taxi_request?.setOnClickListener { requestTaxi() }
+        choose_route?.setOnClickListener { routeChosen() }
+        fabRoutes?.setOnClickListener {
+            mapHandler?.clearMapOverlays()
+            mapHandler?.drawRoads(Route.instance.roads!!)
+            taxi_request?.visibility = View.GONE
+            choose_route?.visibility = View.VISIBLE
+        }
+        fab.setOnClickListener {
+            mapHandler?.animateToLocation(location = User.instance.position, zoomLevel = 17)
+        }
 
         // check access location permission
         if (ContextCompat.checkSelfPermission(this,
@@ -285,7 +292,7 @@ class MainActivity : AppCompatActivity() {
     }
     @SuppressLint("MissingPermission")
     private fun locationRequest() {
-        try {
+       try {
             mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
             mFusedLocationClient?.lastLocation
@@ -305,6 +312,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("MissingPermission")
     private fun startLocationUpdates() {
+
         try {
 
             mFusedLocationClient?.requestLocationUpdates(mLocationRequest,
@@ -319,7 +327,7 @@ class MainActivity : AppCompatActivity() {
     private fun onLocationChanged(location: Location) {
         val currentLocation = GeoPoint(location)
         User.instance.position = currentLocation
-        mapHandler?.updateUserIconOnMap(this,currentLocation)
+        mapHandler?.updateUserIconOnMap(currentLocation)
         if (Route.instance.status in listOf("active", "pending")) {
             val data = JsonObject()
             val pos = JsonObject()
@@ -430,11 +438,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun executeRoadTask(startGp: GeoPoint, endGp: GeoPoint): Boolean{
-        val roadRusult = roadApi?.getRoad(startGp, endGp!!)
-        if (roadRusult != null) {
-            Route.instance.road = roadRusult
-            currentRoad = roadRusult
-            mapHandler?.drawRoad(roadRusult, User.instance.position!!, endGp!!)
+        val roadsRusult = roadApi?.getRoad(startGp, endGp!!)
+        if (roadsRusult != null && roadsRusult.isNotEmpty()) {
+            Route.instance.currentRoad = roadsRusult[0]
+            Route.instance.roads = roadsRusult
+            mapHandler?.drawRoad(roadsRusult[0], User.instance.position!!, endGp!!)
+            fabRoutes?.visibility = View.VISIBLE
             return true
         }
         return false
@@ -442,18 +451,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestTaxi() {
 
-        val serverCall = routeAPI.requestTaxi(User.instance.position!!, endGp!!, currentRoad!!.mNodes)
+        val serverCall = routeAPI.requestTaxi(User.instance.position!!, endGp!!,
+                Route.instance.currentRoad!!.mNodes)
         if(serverCall != null){
 
             serverCall?.enqueue(object: Callback<JsonObject> {
-
                 override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
                     Log.d("server response", "Failed")
                     Toast.makeText(applicationContext, "fail to post on server", Toast.LENGTH_SHORT).show()
-
-
                 }
-
                 override fun onResponse(call: Call<JsonObject>?, response: Response<JsonObject>?) {
 
                     if (response?.code()!! in 200..209) {
@@ -468,6 +474,7 @@ class MainActivity : AppCompatActivity() {
                             Log.d("activity",String.format("id route response %s ", response.body().toString()))
                             setSearchLayoutVisibility(View.GONE)
                             taxi_request?.visibility = View.GONE
+                            fabRoutes?.visibility = View.GONE
                             val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
                             fab.visibility = View.VISIBLE
 
@@ -482,6 +489,15 @@ class MainActivity : AppCompatActivity() {
         } else {
             Log.d("RETROFIT", "ServerCAll is null")
         }
+    }
+
+    private fun routeChosen() {
+        Route.instance.currentRoad = mapHandler?.getRoadChosen()
+        Route.instance.currentRoadIndex = mapHandler?.getRoadChosenIndex()!!
+        mapHandler?.clearMapOverlays()
+        mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, endGp!!)
+        choose_route?.visibility = View.GONE
+        taxi_request?.visibility = View.VISIBLE
     }
 
     fun setSearchLayoutVisibility(visibility: Int = View.VISIBLE) {

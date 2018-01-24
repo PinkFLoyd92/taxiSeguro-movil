@@ -122,14 +122,42 @@
         android:textAlignment="center"
         android:textColor="@color/white"
         android:visibility="gone" />
+    <Button
+        android:id="@+id/choose_route_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center|bottom"
+        android:layout_marginBottom="15dp"
+        android:background="@drawable/fab_shape"
+        android:elevation="10dp"
+        android:text="Seleccionar"
+        android:textAlignment="center"
+        android:textColor="@color/white"
+        android:visibility="gone" />
 
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/fab_mlocation"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="15dp"
-        android:src="@drawable/ic_menu_mylocation"
-        android:tint="@color/white"/>
+        android:orientation="vertical">
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab_routes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:src="@drawable/ic_split_route"
+            android:tint="@color/white"
+            android:visibility="gone"
+            android:layout_above="@+id/fab_mlocation"/>
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab_mlocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:src="@drawable/ic_menu_mylocation"
+            android:tint="@color/white"/>
+
+    </LinearLayout>
+
 
 </FrameLayout>

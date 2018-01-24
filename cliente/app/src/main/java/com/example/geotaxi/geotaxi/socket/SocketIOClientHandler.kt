@@ -46,7 +46,9 @@ class SocketIOClientHandler(
                     val latitude = obj.getJSONObject("position").getString("latitude").toDouble()
                     val longitude = obj.getJSONObject("position").getString("longitude").toDouble()
                     val driverGeo = GeoPoint(latitude, longitude)
-                    mapHandler.updateDriverIconOnMap(activity, driverGeo)
+                    activity.runOnUiThread {
+                        mapHandler.updateDriverIconOnMap(driverGeo)
+                    }
                     if (isFirstDriverPosition) {
                         activity.runOnUiThread {
                             mapHandler?.animateToLocation(location = driverGeo, zoomLevel = 17)
@@ -105,14 +107,17 @@ class SocketIOClientHandler(
         }.on("ROUTE - FINISH") {
             Log.d("OBJECT: ", "ROUTE HAS FINISHED")
             Route.instance.status = "inactive"
-            Route.instance.road = null
+            Route.instance.currentRoad = null
             mapHandler?.clearMapOverlays()
             activity.runOnUiThread {
                 mapHandler.closeDestinationWindowInfo()
                 activity.setSearchLayoutVisibility(/*Visible default*/)
                 Toast.makeText(activity, "La Ruta ha Finalizado", Toast.LENGTH_SHORT).show()
             }
-            mapHandler?.updateUserIconOnMap(activity, User.instance.position!!)
+            activity.runOnUiThread {
+                mapHandler?.updateUserIconOnMap(User.instance.position!!)
+            }
+
         }
         socket.connect()
     }
