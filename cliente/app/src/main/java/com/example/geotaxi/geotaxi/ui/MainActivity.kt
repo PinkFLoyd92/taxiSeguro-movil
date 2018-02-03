@@ -16,7 +16,6 @@ import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.content.Intent
 import android.content.IntentSender
-import android.graphics.Color
 import android.support.design.widget.BottomSheetDialog
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.content.res.ResourcesCompat
@@ -32,6 +31,7 @@ import com.example.geotaxi.geotaxi.API.endpoints.OSRMRoadAPI
 import com.example.geotaxi.geotaxi.API.endpoints.RouteAPI
 import com.example.geotaxi.geotaxi.R
 import com.example.geotaxi.geotaxi.config.GeoConstant
+import com.example.geotaxi.geotaxi.data.Driver
 import com.example.geotaxi.geotaxi.data.Route
 import com.example.geotaxi.geotaxi.data.User
 import com.example.geotaxi.geotaxi.map.MapHandler
@@ -40,6 +40,8 @@ import com.example.geotaxi.geotaxi.ui.adapter.AddressListViewAdapter
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.gson.JsonObject
+import org.json.JSONObject
+import org.osmdroid.bonuspack.routing.Road
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -59,6 +61,8 @@ class MainActivity : AppCompatActivity() {
     var choose_route: Button? = null
     var fabRoutes: FloatingActionButton? = null
     var bSheetDialog: BottomSheetDialog? = null
+    var routeSheetDialog: BottomSheetDialog? = null
+    var routeSheetView: View? = null
     var sheetContentView: View? = null
     var sockethandler : SocketIOClientHandler? = null
     var mFusedLocationClient: FusedLocationProviderClient? = null
@@ -90,11 +94,18 @@ class MainActivity : AppCompatActivity() {
         val destinationIcon = ResourcesCompat.getDrawable(resources, R.drawable.location_marker, null)
         val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
         val geocoderBtn = findViewById<ImageButton>(R.id.geocoder_btn)
+        val cancelRouteActionBtn = findViewById<Button>(R.id.cancel_route_action)
+        val selectingRouteCV = findViewById<CardView>(R.id.selecting_route)
 
         User.instance.position = startGp
         bSheetDialog = BottomSheetDialog(this)
         sheetContentView = View.inflate(this, R.layout.sheet_dialog, null)
         bSheetDialog?.setContentView(sheetContentView)
+        routeSheetDialog = BottomSheetDialog(this)
+        routeSheetDialog?.setCancelable(false)
+        routeSheetDialog?.setCanceledOnTouchOutside(false)
+        routeSheetView = View.inflate(this, R.layout.route_sheet_dialog, null)
+        routeSheetDialog?.setContentView(routeSheetView)
         searchEV.setImeActionLabel("Buscar", KeyEvent.KEYCODE_ENTER)
         searchEV.setOnEditorActionListener(MyEditionActionListener())
         setOnTouchListener(search)
@@ -114,16 +125,42 @@ class MainActivity : AppCompatActivity() {
         }
         mapHandler = MapHandler(this, mapView = map, userIcon = userIcon,
                                     driverIcon = driverIcon, destinationIcon = destinationIcon )
-        sockethandler = SocketIOClientHandler(this, mapHandler!!)
+        sockethandler = SocketIOClientHandler(this, mapHandler!!, roadApi!!)
         sockethandler!!.initConfiguration()
 
         taxi_request?.setOnClickListener { requestTaxi() }
-        choose_route?.setOnClickListener { routeChosen() }
-        fabRoutes?.setOnClickListener {
+        choose_route?.setOnClickListener {
+            selectingRouteCV.visibility = View.GONE
+            taxi_request?.visibility = View.VISIBLE
+            fab.visibility = View.VISIBLE
+            fabRoutes?.visibility = View.VISIBLE
+            setSearchLayoutVisibility(View.VISIBLE)
+            routeChosen()
+        }
+        cancelRouteActionBtn.setOnClickListener{
+            fab.visibility = View.VISIBLE
+            fabRoutes?.visibility = View.VISIBLE
+            taxi_request?.visibility = View.VISIBLE
+            choose_route?.isEnabled = false
+            selectingRouteCV.visibility = View.GONE
+            setSearchLayoutVisibility(View.VISIBLE)
             mapHandler?.clearMapOverlays()
-            mapHandler?.drawRoads(Route.instance.roads!!)
-            taxi_request?.visibility = View.GONE
-            choose_route?.visibility = View.VISIBLE
+            mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, endGp!!)
+        }
+        fabRoutes?.setOnClickListener {
+            if (Route.instance.roads!!.size > 1) {
+                fab.visibility = View.GONE
+                fabRoutes?.visibility = View.GONE
+                selectingRouteCV.visibility = View.VISIBLE
+                mapHandler?.clearMapOverlays()
+                mapHandler?.updateUserIconOnMap(User.instance.position!!)
+                mapHandler?.addDestMarker(endGp!!)
+                mapHandler?.drawRoads(Route.instance.roads!!)
+                taxi_request?.visibility = View.GONE
+                setSearchLayoutVisibility(View.GONE)
+            } else {
+                Toast.makeText(this, "No se encontraron rutas alternativas disponibles", Toast.LENGTH_LONG).show()
+            }
         }
         fab.setOnClickListener {
             mapHandler?.animateToLocation(location = User.instance.position, zoomLevel = 17)
@@ -165,10 +202,60 @@ class MainActivity : AppCompatActivity() {
         bSheetDialog?.show()
     }
 
+    fun showRouteSheetDialog(routeIndex: Int, newRoads: Array<out Road>) {
+        val okRouteBtn = routeSheetView?.findViewById<Button>(R.id.route_ok)
+        val cancelRouteBtn = routeSheetView?.findViewById<Button>(R.id.route_cancel)
+        cancelRouteBtn?.setOnClickListener{
+            mapHandler?.clearMapOverlays()
+            mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, endGp!!)
+            routeSheetDialog?.dismiss()
+            val route = JSONObject()
+            route.put("routeId", Route.instance._id)
+            route.put("driverId", Driver.instance._id)
+            sockethandler?.socket?.emit("ROUTE CHANGE - RESULT", "cancel", route)
+        }
+        okRouteBtn?.setOnClickListener{
+            allowRouteChange(routeIndex, newRoads)
+            routeSheetDialog?.dismiss()
+        }
+        routeSheetDialog?.show()
+    }
+
+    private fun allowRouteChange(routeIndex: Int, newRoads: Array<out Road>) {
+        val serverCall = routeAPI.createRoute(
+                            location = User.instance.position!!, destination = endGp!!, client = User.instance._id,
+                            waypoints = newRoads[routeIndex].mNodes, routeIndex = routeIndex, status = "active",
+                            taxiRequest = false, driver = null, supersededRoute = Route.instance._id)
+        if(serverCall != null){
+            serverCall?.enqueue(object: Callback<JsonObject> {
+                override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
+                    Log.d("server response", "Failed")
+                    Toast.makeText(applicationContext, "fail to post on server", Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onResponse(call: Call<JsonObject>?, response: Response<JsonObject>?) {
+
+                    if (response?.code()!! in 200..209) {
+                        val routeId = response.body()?.get("_id")?.asString
+                        Log.d("main activity", String.format("RouteId: %s", routeId))
+                        if (routeId != null) {
+                            Route.instance._id = routeId
+                            Route.instance.currentRoad = newRoads[routeIndex]
+                            Route.instance.roads = newRoads
+                            Route.instance.currentRoadIndex = routeIndex
+
+                            mapHandler?.clearMapOverlays()
+                            mapHandler?.drawRoad(newRoads[routeIndex], User.instance.position!!, endGp!!)
+                        }
+                    }
+                }
+            })
+        }
+    }
     fun enablePanicButton() {
         actMenu?.findItem(R.id.action_alert)?.isEnabled = true
-        actMenu?.findItem(R.id.action_alert)?.icon
-                ?.mutate()?.setTint(Color.parseColor("#E7291E"))
+        /*actMenu?.findItem(R.id.action_alert)?.icon
+                ?.mutate()?.setTint(Color.parseColor("#E7291E"))*/
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -347,8 +434,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         menu?.findItem(R.id.action_alert)?.isEnabled = false
-        menu?.findItem(R.id.action_alert)?.icon
-                ?.mutate()?.setTint(Color.GRAY)
+       /* menu?.findItem(R.id.action_alert)?.icon
+                ?.mutate()?.setTint(Color.GRAY)*/
         actMenu = menu
         return super.onPrepareOptionsMenu(menu)
     }
@@ -439,9 +526,11 @@ class MainActivity : AppCompatActivity() {
 
     fun executeRoadTask(startGp: GeoPoint, endGp: GeoPoint): Boolean{
         val roadsRusult = roadApi?.getRoad(startGp, endGp!!)
-        if (roadsRusult != null && roadsRusult.isNotEmpty()) {
+        if (roadsRusult != null && roadsRusult.isNotEmpty()
+                && roadsRusult[0].mStatus == Road.STATUS_OK) {
             Route.instance.currentRoad = roadsRusult[0]
             Route.instance.roads = roadsRusult
+            Route.instance.end = endGp
             mapHandler?.drawRoad(roadsRusult[0], User.instance.position!!, endGp!!)
             fabRoutes?.visibility = View.VISIBLE
             return true
@@ -450,15 +539,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestTaxi() {
-
-        val serverCall = routeAPI.requestTaxi(User.instance.position!!, endGp!!,
-                Route.instance.currentRoad!!.mNodes)
+        val waitingDriver = findViewById<CardView>(R.id.waiting_driver_cv)
+        waitingDriver.visibility = View.VISIBLE
+        val serverCall =
+                routeAPI.createRoute(
+                    location = User.instance.position!!, destination = endGp!!, client = User.instance._id,
+                    waypoints = Route.instance.currentRoad!!.mNodes, routeIndex = Route.instance.currentRoadIndex, status = "pending",
+                    taxiRequest = true, driver = null, supersededRoute = null)
         if(serverCall != null){
 
             serverCall?.enqueue(object: Callback<JsonObject> {
                 override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
                     Log.d("server response", "Failed")
-                    Toast.makeText(applicationContext, "fail to post on server", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(applicationContext, "Error al conectar con el servidor", Toast.LENGTH_SHORT).show()
                 }
                 override fun onResponse(call: Call<JsonObject>?, response: Response<JsonObject>?) {
 
@@ -467,18 +560,18 @@ class MainActivity : AppCompatActivity() {
                             val routeId = response.body()?.get("_id")?.asString
                             if (routeId != null) {
                                 Route.instance._id = routeId
+                                Route.instance.status = "pending"
+                                sockethandler!!.socket.emit("JOIN ROUTE", Route.instance._id)
+                                Route.instance.status = "active"
+                                Log.d("activity",String.format("id route response %s ", response.body().toString()))
+                                setSearchLayoutVisibility(View.GONE)
+                                taxi_request?.visibility = View.GONE
+                                fabRoutes?.visibility = View.GONE
+                                val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
+                                fab.visibility = View.VISIBLE
                             }
-                            Route.instance.status = "pending"
-                            sockethandler!!.socket.emit("JOIN ROUTE", Route.instance._id)
-                            Route.instance.status = "active"
-                            Log.d("activity",String.format("id route response %s ", response.body().toString()))
-                            setSearchLayoutVisibility(View.GONE)
-                            taxi_request?.visibility = View.GONE
-                            fabRoutes?.visibility = View.GONE
-                            val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
-                            fab.visibility = View.VISIBLE
 
-                            Toast.makeText(applicationContext, "Server response OK", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(applicationContext, "Solicitud enviada", Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
                             Log.d("activity",String.format("exception on request taxi: %s ", e.message))
                         }
@@ -492,16 +585,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun routeChosen() {
-        Route.instance.currentRoad = mapHandler?.getRoadChosen()
-        Route.instance.currentRoadIndex = mapHandler?.getRoadChosenIndex()!!
+        val roadChosen = mapHandler?.getRoadChosen()
+        if (roadChosen != null) {
+            Route.instance.currentRoad = roadChosen
+        }
+        Route.instance.currentRoadIndex = mapHandler?.getRoadIndexChosen()!!
         mapHandler?.clearMapOverlays()
         mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, endGp!!)
-        choose_route?.visibility = View.GONE
-        taxi_request?.visibility = View.VISIBLE
     }
 
     fun setSearchLayoutVisibility(visibility: Int = View.VISIBLE) {
-        findViewById<LinearLayout>(R.id.edit_lLayout)
+        findViewById<LinearLayout>(R.id.address_search_layout)
                 .visibility = visibility
     }
 

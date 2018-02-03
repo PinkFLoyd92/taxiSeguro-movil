@@ -3,6 +3,9 @@
     <color name="colorPrimary">#ffffff</color>
     <color name="colorPrimaryDark">#262834</color>
     <color name="colorAccent">#2c80fd</color>
+    <color name="chosenRoute">#99383FFF</color>
+    <color name="alternativeRoute">#99B71C1C</color>
+    <color name="bestRoute">#99262834</color>
     <color name="white">#ffffff</color>
     <color name="red_200">#EF9A9A</color>
     <color name="light_blue_900">#01579B</color>

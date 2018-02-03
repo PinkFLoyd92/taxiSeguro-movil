@@ -1,10 +1,8 @@
 package com.example.geotaxi.geotaxi.map
 
-import android.app.Activity
-import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.support.v4.content.res.ResourcesCompat
 import android.view.View
-import android.widget.Toast
 import com.example.geotaxi.geotaxi.R
 import com.example.geotaxi.geotaxi.data.Route
 import com.example.geotaxi.geotaxi.data.User
@@ -24,7 +22,7 @@ import org.osmdroid.views.overlay.infowindow.InfoWindow
  * Created by dieropal on 17/01/18.
  */
 class MapHandler {
-    private var activity: Activity? = null
+    private var activity: MainActivity? = null
     private var map : MapView? = null
     private var driverMarker: Marker? = null
     private var userMarker: Marker? = null
@@ -33,10 +31,7 @@ class MapHandler {
     private var roadOverlays = mutableListOf<Polyline>()
     private var roadChosen : Road? = null
     private var roadChosenIndex: Int = 0
-    private var ROAD_COLORS: HashMap<String, Int> = hashMapOf(
-            "chosen" to Color.BLUE,
-            "alternative" to Color.RED
-    )
+    private var ROAD_COLORS: HashMap<String, Int> = hashMapOf()
 
     constructor(activity: MainActivity,
                 mapView: MapView?,
@@ -59,13 +54,16 @@ class MapHandler {
         userMarker?.setIcon(userIcon)
         driverMarker?.setIcon(driverIcon)
         destinationMarker?.setIcon(destinationIcon)
-
         this.activity = activity
         this.map = mapView
         this.mapController = mapController
         this.driverMarker = driverMarker
         this.userMarker = userMarker
         this.destinationMarker = destinationMarker
+        this.ROAD_COLORS = hashMapOf(
+                "chosen" to ResourcesCompat.getColor(activity.resources, R.color.chosenRoute, null),
+                "alternative" to ResourcesCompat.getColor(activity.resources, R.color.alternativeRoute, null)
+                )
     }
 
     fun updateUserIconOnMap(location: GeoPoint) {
@@ -93,21 +91,36 @@ class MapHandler {
     fun drawRoad(road: Road, userPos: GeoPoint, destinationPos: GeoPoint) {
         if (!road.mNodes.isEmpty()) {
             val roadOverlay = RoadManager.buildRoadOverlay(road)
-            roadOverlay.setOnClickListener { polyline, mapView, eventPos ->
-                Toast.makeText(mapView.getContext(), "polyline with " + polyline.points.size + "pts was tapped", Toast.LENGTH_LONG).show();
-                polyline.color = Color.RED
-                false
+            roadOverlay.color = ROAD_COLORS["chosen"]!!
+            val midIndex = if (road.mNodes.size%2 == 0) {
+                (road.mNodes.size/2) - 1
+            } else {
+                ((road.mNodes.size + 1)/2) - 1
+            }
+            val infoPos = road.mNodes[midIndex].mLocation
+            val duration = ("%.2f".format(road.mDuration/60)) + " min"
+            val distance = ("%.2f".format(road.mLength)) + " km"
+
+            roadOverlay.infoWindow = MyInfoWindow(R.layout.info_window, map!!,
+                    title = duration, description = distance)
+            roadOverlay.infoWindow.view.setOnLongClickListener { v: View ->
+                roadOverlay.infoWindow.close()
+                true
+            }
+            roadOverlay.setOnClickListener{ polyline, mapView, eventPos ->
+                roadOverlay.showInfoWindow(eventPos)
+                true
             }
             updateUserIconOnMap(userPos)
             addDestMarker(destinationPos)
             map?.overlays?.add(roadOverlay)
+            roadOverlay.showInfoWindow(infoPos)
             map?.zoomToBoundingBox(road.mBoundingBox, true)
             map?.invalidate()
         }
     }
 
     fun drawRoads(roads: kotlin.Array<out Road>) {
-        Marker.ENABLE_TEXT_LABELS_WHEN_NO_IMAGE = true
         var roadIndex = 0
         var roadColor = ROAD_COLORS["chosen"]
         if (roadOverlays.isNotEmpty()) {
@@ -119,14 +132,6 @@ class MapHandler {
 
                 val roadOverlay = RoadManager.buildRoadOverlay(road)
                 roadOverlay.width = 6F
-                if (roadIndex != Route.instance.currentRoadIndex) {
-                    roadColor = ROAD_COLORS["alternative"]
-                } else {
-                    roadColor = ROAD_COLORS["chosen"]
-                }
-                roadOverlays.add(roadOverlay)
-
-                roadOverlay.color = roadColor!!
 
                 val midIndex = if (road.mNodes.size%2 == 0) {
                     (road.mNodes.size/2) - 1
@@ -137,9 +142,19 @@ class MapHandler {
                 val duration = ("%.2f".format(road.mDuration/60)) + " min"
                 val distance = ("%.2f".format(road.mLength)) + " km"
 
-                roadOverlay.infoWindow = MyInfoWindow(R.layout.info_window, map!!,
+                val mInfoWin = MyInfoWindow(R.layout.info_window, map!!,
                         title = duration, description = distance)
 
+                if (roadIndex != Route.instance.currentRoadIndex) {
+                    roadColor = ROAD_COLORS["alternative"]
+                    mInfoWin.setTittle("Alterna")
+                    mInfoWin.showTittle()
+                    map?.overlays?.add(roadOverlay)
+                } else {
+                    roadColor = ROAD_COLORS["chosen"]
+                    mInfoWin.hideTittle()
+                }
+                roadOverlay.infoWindow = mInfoWin
                 roadOverlay.infoWindow.view.setOnClickListener{ v: View  ->
                     onRoadChosen(roadOverlay, road)
                 }
@@ -152,18 +167,43 @@ class MapHandler {
                     roadOverlay.showInfoWindow(eventPos)
                     true
                 }
+                roadOverlays.add(roadOverlay)
+
+                roadOverlay.color = roadColor!!
                 roadOverlay.showInfoWindow(infoPos)//open(roadOverlay, infoPos, 2,2)
-                map?.overlays?.add(roadOverlay)
                 map?.zoomToBoundingBox(road.mBoundingBox, true)
                 map?.invalidate()
             }
             roadIndex += 1
         }
+        map?.overlays?.add(roadOverlays[roadChosenIndex])
+    }
+
+    fun drawDriverRequestRoad(road: Road) {
+        if (!road.mNodes.isEmpty()) {
+            val roadOverlay = RoadManager.buildRoadOverlay(road)
+            val midIndex = if (road.mNodes.size%2 == 0) {
+                (road.mNodes.size/2) - 1
+            } else {
+                ((road.mNodes.size + 1)/2) - 1
+            }
+            val infoPos = road.mNodes[midIndex].mLocation
+            val duration = ("%.2f".format(road.mDuration/60)) + " min"
+            val distance = ("%.2f".format(road.mLength)) + " km"
+
+            roadOverlay.infoWindow = MyInfoWindow(R.layout.info_window, map!!,
+                    title = duration, description = distance)
+            roadOverlay.color = ROAD_COLORS["alternative"]!!
+            map?.overlays?.add(roadOverlay)
+            roadOverlay.showInfoWindow(infoPos)
+            map?.zoomToBoundingBox(road.mBoundingBox, true)
+            map?.invalidate()
+        }
     }
 
     private fun onRoadChosen(roadOverlay: Polyline, road: Road) {
         var indx = 0
-        roadOverlay.color = ROAD_COLORS["chosen"]!!
+        activity?.choose_route?.isEnabled = true
         roadOverlays.forEach {
             if (it != roadOverlay) {
                 it.color = ROAD_COLORS["alternative"]!!
@@ -172,18 +212,20 @@ class MapHandler {
             }
             indx+= 1
         }
+        map!!.overlays.remove(roadOverlay)
+        roadOverlay.color = ROAD_COLORS["chosen"]!!
+        map!!.overlays.add(roadOverlay)
         roadChosen = road
     }
 
-    fun getRoadChosen(): Road {
-        return roadChosen!!
+    fun getRoadChosen(): Road? {
+        return roadChosen
     }
 
-    fun getRoadChosenIndex(): Int {
+    fun getRoadIndexChosen(): Int {
         return roadChosenIndex
     }
-    private fun addDestMarker(destPos: GeoPoint) {
-
+    fun addDestMarker(destPos: GeoPoint) {
         destinationMarker?.position = destPos
         destinationMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         //infoMarker.snippet = ("%.2f".format(road.mDuration/60)) + " min"

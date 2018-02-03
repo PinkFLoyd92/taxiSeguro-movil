@@ -1,18 +1,19 @@
-package com.example.geotaxi.geotaxi.map
+package com.example.geotaxi.taxiseguroconductor.map
 
 import android.view.View
 import android.widget.TextView
-import com.example.geotaxi.geotaxi.R
+import com.example.geotaxi.taxiseguroconductor.R
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.infowindow.InfoWindow
 
 /**
- * Created by dieropal on 23/01/18.
+ * Created by dieropal on 25/01/18.
  */
 class MyInfoWindow(layoutResId: Int, mapView: MapView,
                    title: String, description: String): InfoWindow(layoutResId, mapView) {
     init {
         mView.findViewById<TextView>(R.id.time).text = title
+        //mView.findViewById<TextView>(R.id.bubble_description).text = description
     }
 
     override fun onOpen(item: Any?) {
@@ -34,4 +35,5 @@ class MyInfoWindow(layoutResId: Int, mapView: MapView,
     fun hideTittle() {
         mView.findViewById<TextView>(R.id.route_tittle).visibility = View.GONE
     }
+
 }

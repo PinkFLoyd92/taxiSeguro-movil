@@ -11,6 +11,7 @@ import android.location.Location
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v4.content.res.ResourcesCompat
@@ -20,11 +21,13 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.Button
 import android.widget.Toast
 import com.example.geotaxi.taxiseguroconductor.R
 import com.example.geotaxi.taxiseguroconductor.config.Env
 import com.example.geotaxi.taxiseguroconductor.config.GeoConstant
 import com.example.geotaxi.taxiseguroconductor.config.GeoConstant.Companion.MY_PERMISSIONS_REQUEST_LOCATION
+import com.example.geotaxi.taxiseguroconductor.data.Client
 import com.example.geotaxi.taxiseguroconductor.data.Route
 import com.example.geotaxi.taxiseguroconductor.data.User
 import com.example.geotaxi.taxiseguroconductor.map.MapHandler
@@ -32,6 +35,8 @@ import com.example.geotaxi.taxiseguroconductor.socket.SocketIODriverHandler
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.gson.JsonObject
+import kotlinx.android.synthetic.main.activity_main.*
+import org.json.JSONObject
 import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -51,7 +56,10 @@ class MainActivity : AppCompatActivity() {
     var userIcon : Drawable? = null
     var driverMarker: Marker? = null
     var clientMarker: Marker? = null
-    var onRoute = false
+    var choose_route: Button? = null
+    var fabRoutes: FloatingActionButton? = null
+    var requestRouteChange: Button? = null
+    var progressBarConfirmation: CardView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,14 +68,56 @@ class MainActivity : AppCompatActivity() {
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
         setContentView(R.layout.activity_main)
         val mapController = this.initMap()
+        val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
+        val destinationIcon = ResourcesCompat.getDrawable(resources, R.drawable.location_marker, null)
+        val destMarker = Marker(this.map)
+        val cancelRouteActionBtn = findViewById<Button>(R.id.cancel_route_action)
+        val selectingRouteCV = findViewById<CardView>(R.id.selecting_route)
+
+        destMarker.setIcon(destinationIcon)
+        progressBarConfirmation = findViewById(R.id.waiting_confirmation)
+        requestRouteChange = findViewById(R.id.request_route_change)
+        choose_route = findViewById(R.id.choose_route_btn)
+        fabRoutes = findViewById(R.id.fab_routes)
         driverIcon = ResourcesCompat.getDrawable(resources, R.mipmap.ic_driver, null)
         userIcon = ResourcesCompat.getDrawable(resources, R.drawable.ic_user, null)
         driverMarker = Marker(this.map)
         driverMarker?.setIcon(driverIcon)
         clientMarker = Marker(this.map)
         clientMarker?.setIcon(userIcon)
-        mapHandler = MapHandler(mapView = map, clientMarker = clientMarker, driverMarker = driverMarker, mapController = mapController, mCurrentLocation = mCurrentLocation)
+        mapHandler = MapHandler(this, mapView = map, clientMarker = clientMarker, driverMarker = driverMarker, destinationMarker = destMarker,
+                                    mapController = mapController, mCurrentLocation = mCurrentLocation)
         sockethandler.initConfiguration(this, mapHandler as MapHandler)
+
+        requestRouteChange?.setOnClickListener {
+            selectingRouteCV.visibility = View.GONE
+            fab.visibility = View.VISIBLE
+            choose_route?.visibility = View.VISIBLE
+            requestRouteChange?.visibility = View.GONE
+            sendRouteChangeRequest()
+        }
+        choose_route?.setOnClickListener {
+            choose_route?.visibility = View.GONE
+            requestRouteChange?.visibility = View.VISIBLE
+            routeChosen()
+        }
+        cancelRouteActionBtn.setOnClickListener{
+            fab.visibility = View.VISIBLE
+            fabRoutes?.visibility = View.VISIBLE
+            choose_route?.isEnabled = false
+            choose_route?.visibility = View.VISIBLE
+            requestRouteChange?.visibility = View.GONE
+            selectingRouteCV.visibility = View.GONE
+            mapHandler?.clearMapOverlays()
+            mapHandler?.drawRoad(Route.instance.currentRoad!!, Route.instance.start!!)
+        }
+        fabRoutes?.setOnClickListener {
+            fabRoutes?.visibility = View.GONE
+            getAlternativeRoutes(selectingRouteCV, fab)
+        }
+        fab.setOnClickListener {
+            mapHandler?.animateToLocation(location = User.instance.position, zoomLevel = 17)
+        }
 
         // check access location permission
         if (ContextCompat.checkSelfPermission(this,
@@ -185,7 +235,7 @@ class MainActivity : AppCompatActivity() {
         }else {
             Log.d("ERROR - LOCATION",String.format("locations: %s ", "" + location.toString()))
         }
-        if (Route.instance.routeObj != null) {
+        if (Route.instance.currentRoad != null) {
             val data = JsonObject()
             val pos = JsonObject()
             pos.addProperty("longitude", this.mCurrentLocation?.longitude)
@@ -287,7 +337,47 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    public fun acceptRoute(view : View) {
+    private fun routeChosen() {
+        val roadIndexChosen = mapHandler?.getRoadIndexChosen()
+        mapHandler?.clearMapOverlays()
+        mapHandler?.drawRoad(mapHandler?.alternativeRoutes!![roadIndexChosen!!], User.instance.position!!)
+    }
+
+    private fun getAlternativeRoutes(selectingRouteCV: CardView, fabLocation: FloatingActionButton) {
+        //search for alternatives routes
+        val result = mapHandler!!.getAlternativeRoutes(User.instance.position!!, mapHandler!!.destPosition!!)
+        if (result != null && result.size > 1) {
+            fabLocation.visibility = View.GONE
+            fabRoutes?.visibility = View.GONE
+            selectingRouteCV.visibility = View.VISIBLE
+            mapHandler?.alternativeRoutes = result
+            mapHandler?.clearMapOverlays()
+            mapHandler?.drawRoads(result)
+            mapHandler?.updateClientIconOnMap(User.instance.position!!)
+            mapHandler?.addDestMarker()
+        } else {
+            Toast.makeText(this, "No se encontraron rutas alternativas disponibles", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun sendRouteChangeRequest() {
+        val roadIndexChosen = mapHandler!!.getRoadIndexChosen()!!
+        val latitude = mapHandler!!.getRoadChosen()!!.mNodes.first().mLocation.latitude
+        val longitude = mapHandler!!.getRoadChosen()!!.mNodes.first().mLocation.longitude
+        val data = JSONObject()
+        val start = JSONObject()
+        start.put("latitude", latitude)
+        start.put("longitude", longitude)
+        data.put("start", start)
+        data.put("routeIndex", roadIndexChosen)
+        data.put("clientId", Client.instance._id)
+        sockethandler.socket.emit("ROUTE CHANGE - REQUEST", data)
+        waiting_confirmation.visibility = View.VISIBLE
+        requestRouteChange?.visibility = View.GONE
+        fabRoutes?.visibility = View.GONE
+    }
+
+    fun acceptRoute(view : View) {
         this.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.GONE
     }
 

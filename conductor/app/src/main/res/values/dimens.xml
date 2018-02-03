@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="fab_height">25dp</dimen>
-    <dimen name="fab_height_reverse">-25dp</dimen>
-    <dimen name="fab_width">190dp</dimen>
+    <dimen name="fab_height">10dp</dimen>
+    <dimen name="fab_height_reverse">-10dp</dimen>
+    <dimen name="fab_width">170dp</dimen>
     <dimen name="fab_radius">22dp</dimen>
 </resources>
