@@ -2,6 +2,7 @@ package com.example.geotaxi.geotaxi.API.endpoints
 
 import com.example.geotaxi.geotaxi.API.API
 import com.example.geotaxi.geotaxi.API.ServerAPI
+import com.example.geotaxi.geotaxi.data.Driver
 import com.example.geotaxi.geotaxi.data.User
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -13,43 +14,74 @@ import retrofit2.Call
  * Created by dieropal on 17/01/18.
  */
 class RouteAPI {
+    private val retrofit = API.retrofit
+    private val serverAPI = retrofit.create(ServerAPI::class.java)
 
-    fun requestTaxi(location: GeoPoint, destination: GeoPoint,
-                    waypoints: ArrayList<RoadNode>) : Call<JsonObject>? {
-        val retrofit = API.retrofit
-        val serverAPI = retrofit.create(ServerAPI::class.java)
-        val jsonObject = roadToJson(location, destination, waypoints)
+    fun createRoute(location: GeoPoint, destination: GeoPoint, client: String,
+                    waypoints: ArrayList<RoadNode>, routeIndex: Int, status: String,
+                    taxiRequest: Boolean, driver: String?, supersededRoute: String?) : Call<JsonObject>? {
+
+        val jsonObject = roadToJson(location, destination, client, waypoints, routeIndex,
+                                    status, taxiRequest, driver, supersededRoute)
         return serverAPI?.createRoute(jsonObject)
     }
 
-    private fun roadToJson(location: GeoPoint, destination: GeoPoint, waypoints: ArrayList<RoadNode>): JsonObject {
+    private fun roadToJson(location: GeoPoint?, destination: GeoPoint?, client: String?,
+                           waypoints: ArrayList<RoadNode>?, routeIndex: Int?, status: String,
+                           taxiRequest: Boolean, driver: String?, supersededRoute: String?): JsonObject {
         val json = JsonObject()
-        val jsonPoints = JsonArray()
-        val start = JsonObject()
-        val end = JsonObject()
-        val coorStart = JsonArray()
-        val coorEnd = JsonArray()
-        coorStart.add(location.longitude)
-        coorStart.add(location.latitude)
-        coorEnd.add(destination?.longitude)
-        coorEnd.add(destination?.latitude)
-        start.addProperty("type", "Point")
-        start.add("coordinates", coorStart)
-        end.addProperty("type", "Point")
-        end.add("coordinates", coorEnd)
+
+        if (location != null) {
+            val start = JsonObject()
+            val coorStart = JsonArray()
+            coorStart.add(location.longitude)
+            coorStart.add(location.latitude)
+            start.addProperty("type", "Point")
+            start.add("coordinates", coorStart)
+            json.add("start", start)
+        }
+        if (destination != null) {
+            val end = JsonObject()
+            val coorEnd = JsonArray()
+            coorEnd.add(destination?.longitude)
+            coorEnd.add(destination?.latitude)
+            end.addProperty("type", "Point")
+            end.add("coordinates", coorEnd)
+            json.add("end", end)
+        }
         if(waypoints!=null){
+            val jsonPoints = JsonArray()
             for(n in waypoints.iterator()){
                 val jsonArr = JsonArray()
                 jsonArr.add(n.mLocation.longitude)
                 jsonArr.add(n.mLocation.latitude)
                 jsonPoints.add(jsonArr)
             }
+            json.add("points", jsonPoints)
         }
-        json.addProperty("client", User.instance._id)
-        json.add("start", start)
-        json.add("end", end)
-        json.add("points", jsonPoints)
+        if (client != null) {
+            json.addProperty("client", client)
+        }
 
+        if (routeIndex != null) {
+            json.addProperty("route_index", routeIndex)
+        }
+
+        if (status != null) {
+            json.addProperty("status", status)
+        }
+
+        if (driver != null) {
+            json.addProperty("driver", driver)
+        }
+
+        if (supersededRoute != null) {
+            json.addProperty("supersededRoute", supersededRoute)
+        }
+
+        if (taxiRequest != null) {
+            json.addProperty("taxiRequest", taxiRequest)
+        }
         return json
     }
 }

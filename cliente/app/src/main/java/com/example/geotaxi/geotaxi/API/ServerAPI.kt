@@ -50,6 +50,13 @@ interface ServerAPI {
             ): Call<JsonObject>
 
     @Headers( "Content-Type: application/json" )
+    @PUT("routes/{id}")
+    fun updateRoute(
+            @Path("id") id: String,
+            @Body body: JsonObject
+    ): Call<JsonObject>
+
+    @Headers( "Content-Type: application/json" )
     @POST("users/")
     fun createUser(
             @Body body: JsonObject

@@ -15,7 +15,10 @@ private constructor() {
     var start : GeoPoint?= null
     var end : GeoPoint?= null
     var waypoints : ArrayList<GeoPoint>? = null
-    var road: Road? = null
+    var currentRoad: Road? = null
+    var roads: Array<out Road>? = null
+    var currentRoadIndex = 0
+
     companion object {
         val instance = Route()
     }
