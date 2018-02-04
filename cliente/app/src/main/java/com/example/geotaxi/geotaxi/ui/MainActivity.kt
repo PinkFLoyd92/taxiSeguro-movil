@@ -225,7 +225,7 @@ class MainActivity : AppCompatActivity() {
         val serverCall = routeAPI.createRoute(
                             location = User.instance.position!!, destination = endGp!!, client = User.instance._id,
                             waypoints = newRoads[routeIndex].mNodes, routeIndex = routeIndex, status = "active",
-                            taxiRequest = false, driver = null, supersededRoute = Route.instance._id)
+                            taxiRequest = false, driver = Driver.instance._id, supersededRoute = Route.instance._id)
         if(serverCall != null){
             serverCall?.enqueue(object: Callback<JsonObject> {
                 override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
