@@ -36,6 +36,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_margin="1dp"
+                android:textColor="@color/colorPrimaryDark"
                 android:text="35 min"
                 android:textSize="10sp" />
         </LinearLayout>

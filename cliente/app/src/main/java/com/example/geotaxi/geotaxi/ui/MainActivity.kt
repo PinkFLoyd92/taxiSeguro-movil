@@ -23,6 +23,7 @@ import android.support.v7.app.AlertDialog
 import android.support.v7.widget.CardView
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
+import android.support.v7.widget.Toolbar
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.*
@@ -45,6 +46,7 @@ import org.osmdroid.bonuspack.routing.Road
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import uk.co.chrisjenx.calligraphy.CalligraphyConfig
 
 
 class MainActivity : AppCompatActivity() {
@@ -69,16 +71,21 @@ class MainActivity : AppCompatActivity() {
     var mLocationRequest: LocationRequest? = null
     var mLocationCallback: LocationCallback? = null
     var actMenu: Menu? = null
-
+    lateinit var toolbar: Toolbar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CalligraphyConfig.initDefault(CalligraphyConfig.Builder()
+                .setDefaultFontPath("fonts/open-sans/OpenSans-Bold.ttf")
+                .setFontAttrId(R.attr.fontPath)
+                .build())
 
         val ctx = applicationContext
         //important! set your user agent to prevent getting banned from the osm servers
         Configuration.getInstance().userAgentValue = packageName
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
         setContentView(R.layout.activity_main)
+        toolbar = findViewById(R.id.toolbar)
         roadApi = OSRMRoadAPI(this)
         addressCardView = findViewById(R.id.address_card_view)
         addressRecyclerView = findViewById(R.id.address_recycler_view)
@@ -96,6 +103,8 @@ class MainActivity : AppCompatActivity() {
         val geocoderBtn = findViewById<ImageButton>(R.id.geocoder_btn)
         val cancelRouteActionBtn = findViewById<Button>(R.id.cancel_route_action)
         val selectingRouteCV = findViewById<CardView>(R.id.selecting_route)
+
+        setSupportActionBar(toolbar)
 
         User.instance.position = startGp
         bSheetDialog = BottomSheetDialog(this)
