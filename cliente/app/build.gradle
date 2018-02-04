@@ -52,4 +52,6 @@ dependencies {
     //Caligraphy
     compile 'uk.co.chrisjenx:calligraphy:2.2.0'
 
+    // android chat
+	compile 'com.github.timigod:android-chat-ui:v0.1.3'
 }
