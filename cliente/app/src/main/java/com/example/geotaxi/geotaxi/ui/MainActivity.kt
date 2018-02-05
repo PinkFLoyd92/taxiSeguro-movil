@@ -61,7 +61,7 @@ import uk.co.chrisjenx.calligraphy.CalligraphyConfig
 
 class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
 
-    private lateinit var chatController : ChatController
+    lateinit var chatController : ChatController
     private var chatList: ChatList = ChatList()
     var geocoderApi: GeocoderNominatimAPI = GeocoderNominatimAPI()
     var roadApi: OSRMRoadAPI? = null
@@ -124,6 +124,11 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         val selectingRouteCV = findViewById<CardView>(R.id.selecting_route)
         val messageLauncher = findViewById<LinearLayout>(R.id.slider_messages)
 
+        chatController = ChatController(
+                chatScene = ChatView.ChatScene(activity = this,
+                        chatList = this.chatList),
+                activity = this,
+                chatList = this.chatList )
         messageLauncher.setOnClickListener {
             this.startChatDialog()
         }
@@ -613,6 +618,12 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                         } catch (e: Exception) {
                             Log.d("activity",String.format("exception on request taxi: %s ", e.message))
                         }
+                    } else {
+                        sockethandler!!.socket.emit("ROUTE DELETE", User.instance._id)
+                        val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
+                        fab.visibility = View.GONE
+                        waitingDriver.visibility  = View.GONE
+                        Toast.makeText(applicationContext, "No hay conductores disponibles", Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -655,11 +666,6 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
     }
 
     private fun startChatDialog() {
-        chatController = ChatController(
-                chatScene = ChatView.ChatScene(activity = this,
-                        chatList = this.chatList),
-                activity = this,
-                chatList = this.chatList )
 
         chatController.onStart()
     }

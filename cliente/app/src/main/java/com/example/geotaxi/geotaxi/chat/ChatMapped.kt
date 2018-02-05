@@ -10,6 +10,7 @@ class ChatMapped(val chat : Chat) {
     val chatIdRoute = chat.id_route
     val monitorInfo = chat.username
     val chatRole = chat.role
+    val messages = chat.messages
     val id : String
     get() {
         return chat.id_user
