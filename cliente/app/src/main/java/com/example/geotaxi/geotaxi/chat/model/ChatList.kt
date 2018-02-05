@@ -9,4 +9,5 @@ import com.example.geotaxi.geotaxi.data.Chat
 
 class ChatList {
     val chats :ArrayList<ChatMapped> = ArrayList()
+    lateinit var selectedChat:ChatMapped
 }

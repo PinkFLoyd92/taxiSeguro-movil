@@ -1,5 +1,6 @@
 package com.example.geotaxi.geotaxi.chat.controller
 
+import co.intentservice.chatui.models.ChatMessage
 import com.example.geotaxi.geotaxi.chat.ChatAdapter
 import com.example.geotaxi.geotaxi.chat.ChatMapped
 import com.example.geotaxi.geotaxi.chat.model.ChatList
@@ -7,7 +8,9 @@ import com.example.geotaxi.geotaxi.chat.view.ChatView
 import com.example.geotaxi.geotaxi.chat.view.MessageDialog
 import com.example.geotaxi.geotaxi.data.Chat
 import com.example.geotaxi.geotaxi.data.Route
+import com.example.geotaxi.geotaxi.socket.SocketIOClientHandler
 import com.example.geotaxi.geotaxi.ui.MainActivity
+import java.util.concurrent.ExecutionException
 
 /**
  * Created by sebas on 2/4/18.
@@ -15,19 +18,27 @@ import com.example.geotaxi.geotaxi.ui.MainActivity
 
 class ChatController (val chatScene: ChatView.ChatScene,
                       val activity: MainActivity,
-                      val chatList: ChatList) {
+                      val chatList: ChatList
+    ) {
+    lateinit var socketHandler : SocketIOClientHandler
+    private val instance :ChatController = this
+    var messageDialog: MessageDialog = MessageDialog()
 
     private val chatListener = object : ChatAdapter.OnChatListener{
 
         override fun launchMessageDialog(chat: ChatMapped, position: Int) {
-            val messageDialog:MessageDialog = MessageDialog()
-
+            messageDialog.chatController = instance
+            chatList.selectedChat = chat
             messageDialog.show(activity.fragmentManager, "")
         }
 
         fun onBackPressed(mainActivity: MainActivity) {
             TODO("not implemented")
         }
+    }
+
+    fun getMessages() : ArrayList<ChatMessage> {
+        return chatList.selectedChat.messages
     }
 
     fun onStart() {
@@ -44,6 +55,13 @@ class ChatController (val chatScene: ChatView.ChatScene,
         return false
     }
 
+    fun tryToAddMessage(chatMessage: ChatMessage) {
+        try {
+            messageDialog.renderMessage(chatMessage)
+        } catch (e: Exception){
+            e.printStackTrace()
+        }
+    }
     fun addMonitor(id_user: String, username: String, role: String) {
         val chat: Chat = Chat(id_user = id_user,
                 id_route = Route.instance._id,
@@ -56,5 +74,9 @@ class ChatController (val chatScene: ChatView.ChatScene,
         }catch (e: kotlin.UninitializedPropertyAccessException) {
 
         }
+    }
+
+    fun sendMessage(chatMessage: ChatMessage) {
+        socketHandler.emitMessage(chatMessage)
     }
 }

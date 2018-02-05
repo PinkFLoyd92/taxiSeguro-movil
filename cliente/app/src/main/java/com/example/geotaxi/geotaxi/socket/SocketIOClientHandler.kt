@@ -5,9 +5,12 @@ import android.support.v7.widget.CardView
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import co.intentservice.chatui.models.ChatMessage
 import com.example.geotaxi.geotaxi.API.endpoints.OSRMRoadAPI
 import com.example.geotaxi.geotaxi.R
+import com.example.geotaxi.geotaxi.chat.ChatMapped
 import com.example.geotaxi.geotaxi.config.Env
+import com.example.geotaxi.geotaxi.data.Chat
 import com.example.geotaxi.geotaxi.data.Driver
 import com.example.geotaxi.geotaxi.data.Route
 import com.example.geotaxi.geotaxi.data.User
@@ -20,6 +23,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.util.GeoPoint
+import java.util.*
 import java.util.concurrent.ExecutionException
 
 /**
@@ -67,7 +71,31 @@ class SocketIOClientHandler(
                             Log.d("error" , args.toString())
                         }
                     }
-                }.on("CHAT - MONITORS") { args ->
+                }.on("ROUTE - CHAT") { args ->
+                    val obj = args[0] as JSONObject
+                    val route_id =  obj.getString("route_id")
+                    val role =  obj.getString("role")
+                    val message_text = obj.getJSONObject("message")
+                    val from :String = message_text.getString("from")
+                    val text :String = message_text.getString("text")
+                    val date: Date = Date(message_text.getLong("date"))
+
+                    val chatMessage: ChatMessage = ChatMessage(text,
+                            message_text.getLong("date"), ChatMessage.Type.RECEIVED)
+                    val chatMapped:ChatMapped? = activity.chatController.chatList.chats.find {
+                        it.monitor_id == from
+                    }
+                    if(chatMapped != null) {
+                        activity.chatController.chatList.selectedChat = chatMapped
+                        chatMapped.messages.add(chatMessage)
+                        activity.chatController.tryToAddMessage(chatMessage)
+
+                    }
+                    else {
+                        Log.d("ROUTECHAT", "No existe ese monitor")
+                    }
+
+                } .on("CHAT - MONITORS") { args ->
                     val obj = args[0] as JSONObject
                     Log.d("obj", obj.toString())
                     val id = obj.getString("_id")
@@ -78,10 +106,12 @@ class SocketIOClientHandler(
                                     .isMonitorAlreadyCreated(id)) {*/
 
                     Log.d("information", obj.toString())
-                        activity.chatController
-                                .addMonitor(id_user = id,
-                                        username = username,
-                                        role =  role)
+            activity.runOnUiThread {
+                activity.chatController
+                        .addMonitor(id_user = id,
+                                username = username,
+                                role =  role)
+            }
                     //}
                 }
                 .on("DRIVER - CHOSEN") { args ->
@@ -156,6 +186,24 @@ class SocketIOClientHandler(
         socket.connect()
     }
 
+    fun emitMessage(chatMessage: ChatMessage) {
+        val chatMapped: ChatMapped = activity.chatController.chatList.selectedChat
+
+        val messageInfo = JsonObject()
+        val message = JsonObject()
+        messageInfo.addProperty("route_id", Route.instance._id)
+        messageInfo.addProperty("role", User.instance.role)
+
+        message.addProperty("from", User.instance._id)
+        message.addProperty("position", "left")
+        message.addProperty("type", "text")
+        message.addProperty("value", chatMessage.message)
+        message.addProperty("text", chatMessage.message)
+        message.addProperty("date", chatMessage.timestamp)
+        messageInfo.add("message", message)
+
+        socket.emit("CHAT - SEND FROM CLIENT", messageInfo)
+    }
     fun initRouteAtLaunch(obj: JSONObject) {
         val startLoc: Location? = Location("")
         val endLoc: Location? = Location("")

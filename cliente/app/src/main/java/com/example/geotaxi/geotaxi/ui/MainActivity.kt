@@ -171,6 +171,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         sockethandler = SocketIOClientHandler(this, mapHandler!!, roadApi!!)
         sockethandler!!.initConfiguration()
 
+        chatController.socketHandler = sockethandler!!
+
         taxi_request?.setOnClickListener { requestTaxi() }
         choose_route?.setOnClickListener {
             selectingRouteCV.visibility = View.GONE
