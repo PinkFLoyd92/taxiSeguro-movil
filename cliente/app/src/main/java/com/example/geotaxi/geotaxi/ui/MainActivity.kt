@@ -16,13 +16,18 @@ import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.content.Intent
 import android.content.IntentSender
+import android.media.Image
 import android.support.design.widget.BottomSheetDialog
 import android.support.design.widget.FloatingActionButton
+import android.support.v4.app.DialogFragment
 import android.support.v4.content.res.ResourcesCompat
+import android.support.v4.view.GravityCompat
+import android.support.v4.widget.DrawerLayout
 import android.support.v7.app.AlertDialog
 import android.support.v7.widget.CardView
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
+import android.support.v7.widget.Toolbar
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.*
@@ -30,6 +35,10 @@ import com.example.geotaxi.geotaxi.API.endpoints.GeocoderNominatimAPI
 import com.example.geotaxi.geotaxi.API.endpoints.OSRMRoadAPI
 import com.example.geotaxi.geotaxi.API.endpoints.RouteAPI
 import com.example.geotaxi.geotaxi.R
+import com.example.geotaxi.geotaxi.chat.controller.ChatController
+import com.example.geotaxi.geotaxi.chat.model.ChatList
+import com.example.geotaxi.geotaxi.chat.view.ChatDialog
+import com.example.geotaxi.geotaxi.chat.view.ChatView
 import com.example.geotaxi.geotaxi.config.GeoConstant
 import com.example.geotaxi.geotaxi.data.Driver
 import com.example.geotaxi.geotaxi.data.Route
@@ -37,17 +46,23 @@ import com.example.geotaxi.geotaxi.data.User
 import com.example.geotaxi.geotaxi.map.MapHandler
 import com.example.geotaxi.geotaxi.socket.SocketIOClientHandler
 import com.example.geotaxi.geotaxi.ui.adapter.AddressListViewAdapter
+import com.example.geotaxi.geotaxi.utils.Utility
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.gson.JsonObject
+import de.hdodenhof.circleimageview.CircleImageView
 import org.json.JSONObject
 import org.osmdroid.bonuspack.routing.Road
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import uk.co.chrisjenx.calligraphy.CalligraphyConfig
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
+
+    lateinit var chatController : ChatController
+    private var chatList: ChatList = ChatList()
     var geocoderApi: GeocoderNominatimAPI = GeocoderNominatimAPI()
     var roadApi: OSRMRoadAPI? = null
     var routeAPI: RouteAPI = RouteAPI()
@@ -69,22 +84,33 @@ class MainActivity : AppCompatActivity() {
     var mLocationRequest: LocationRequest? = null
     var mLocationCallback: LocationCallback? = null
     var actMenu: Menu? = null
-
+    lateinit var toolbar: Toolbar
+    lateinit var drawerLayout: DrawerLayout
+    lateinit var navButton: ImageView
+    lateinit var avatarView: CircleImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CalligraphyConfig.initDefault(CalligraphyConfig.Builder()
+                .setDefaultFontPath("fonts/open-sans/OpenSans-Bold.ttf")
+                .setFontAttrId(R.attr.fontPath)
+                .build())
 
         val ctx = applicationContext
         //important! set your user agent to prevent getting banned from the osm servers
         Configuration.getInstance().userAgentValue = packageName
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
         setContentView(R.layout.activity_main)
+        toolbar = findViewById(R.id.toolbar)
         roadApi = OSRMRoadAPI(this)
         addressCardView = findViewById(R.id.address_card_view)
         addressRecyclerView = findViewById(R.id.address_recycler_view)
         taxi_request = findViewById(R.id.taxi_request_button)
         choose_route = findViewById(R.id.choose_route_btn)
         fabRoutes = findViewById(R.id.fab_routes)
+        drawerLayout = findViewById(R.id.drawer_layout)
+        avatarView = findViewById<CircleImageView>(R.id.circleView)
+        avatarView.setImageBitmap(Utility.getBitmapFromText("Usuario Sebas", "D", 250, 250))
 
         val map = findViewById<MapView>(R.id.map)
         val searchEV = findViewById<EditText>(R.id.search)
@@ -96,6 +122,23 @@ class MainActivity : AppCompatActivity() {
         val geocoderBtn = findViewById<ImageButton>(R.id.geocoder_btn)
         val cancelRouteActionBtn = findViewById<Button>(R.id.cancel_route_action)
         val selectingRouteCV = findViewById<CardView>(R.id.selecting_route)
+        val messageLauncher = findViewById<LinearLayout>(R.id.slider_messages)
+
+        chatController = ChatController(
+                chatScene = ChatView.ChatScene(activity = this,
+                        chatList = this.chatList),
+                activity = this,
+                chatList = this.chatList )
+        messageLauncher.setOnClickListener {
+            this.startChatDialog()
+        }
+
+
+        setSupportActionBar(toolbar)
+        navButton = findViewById(R.id.nav_button)
+        navButton.setOnClickListener {
+            drawerLayout.openDrawer(GravityCompat.START)
+        }
 
         User.instance.position = startGp
         bSheetDialog = BottomSheetDialog(this)
@@ -124,7 +167,7 @@ class MainActivity : AppCompatActivity() {
                 fillAddressesRecyclerView()
         }
         mapHandler = MapHandler(this, mapView = map, userIcon = userIcon,
-                                    driverIcon = driverIcon, destinationIcon = destinationIcon )
+                driverIcon = driverIcon, destinationIcon = destinationIcon )
         sockethandler = SocketIOClientHandler(this, mapHandler!!, roadApi!!)
         sockethandler!!.initConfiguration()
 
@@ -168,12 +211,12 @@ class MainActivity : AppCompatActivity() {
 
         // check access location permission
         if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION)
+                        Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
 
             // Should we show an explanation?
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.ACCESS_FINE_LOCATION)) {
+                            Manifest.permission.ACCESS_FINE_LOCATION)) {
 
                 // Show an explanation to the user *asynchronously* -- don't block
                 // this thread waiting for the user's response! After the user
@@ -285,7 +328,7 @@ class MainActivity : AppCompatActivity() {
                     // permission was granted, yay! Do the
                     // location-related task you need to do.
                     if (ContextCompat.checkSelfPermission(this,
-                            Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                    Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                         initLocationrequest()
                     }
 
@@ -379,7 +422,7 @@ class MainActivity : AppCompatActivity() {
     }
     @SuppressLint("MissingPermission")
     private fun locationRequest() {
-       try {
+        try {
             mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
             mFusedLocationClient?.lastLocation
@@ -434,8 +477,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         menu?.findItem(R.id.action_alert)?.isEnabled = false
-       /* menu?.findItem(R.id.action_alert)?.icon
-                ?.mutate()?.setTint(Color.GRAY)*/
+        /* menu?.findItem(R.id.action_alert)?.icon
+                 ?.mutate()?.setTint(Color.GRAY)*/
         actMenu = menu
         return super.onPrepareOptionsMenu(menu)
     }
@@ -543,9 +586,9 @@ class MainActivity : AppCompatActivity() {
         waitingDriver.visibility = View.VISIBLE
         val serverCall =
                 routeAPI.createRoute(
-                    location = User.instance.position!!, destination = endGp!!, client = User.instance._id,
-                    waypoints = Route.instance.currentRoad!!.mNodes, routeIndex = Route.instance.currentRoadIndex, status = "pending",
-                    taxiRequest = true, driver = null, supersededRoute = null)
+                        location = User.instance.position!!, destination = endGp!!, client = User.instance._id,
+                        waypoints = Route.instance.currentRoad!!.mNodes, routeIndex = Route.instance.currentRoadIndex, status = "pending",
+                        taxiRequest = true, driver = null, supersededRoute = null)
         if(serverCall != null){
 
             serverCall?.enqueue(object: Callback<JsonObject> {
@@ -575,6 +618,12 @@ class MainActivity : AppCompatActivity() {
                         } catch (e: Exception) {
                             Log.d("activity",String.format("exception on request taxi: %s ", e.message))
                         }
+                    } else {
+                        sockethandler!!.socket.emit("ROUTE DELETE", User.instance._id)
+                        val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
+                        fab.visibility = View.GONE
+                        waitingDriver.visibility  = View.GONE
+                        Toast.makeText(applicationContext, "No hay conductores disponibles", Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -599,4 +648,25 @@ class MainActivity : AppCompatActivity() {
                 .visibility = visibility
     }
 
+    override fun onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)){
+            drawerLayout.closeDrawer(Gravity.LEFT)
+        }
+        else if (drawerLayout.isDrawerOpen(GravityCompat.END)){
+            drawerLayout.closeDrawer(Gravity.RIGHT)
+        }
+    }
+
+    override fun onDialogPositiveClick(dialog: DialogFragment) {
+        dialog.dismiss()
+    }
+
+    override fun onDialogNegativeClick(dialog: DialogFragment) {
+        dialog.dismiss()
+    }
+
+    private fun startChatDialog() {
+
+        chatController.onStart()
+    }
 }

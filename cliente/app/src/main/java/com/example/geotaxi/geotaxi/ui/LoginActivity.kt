@@ -34,11 +34,13 @@ class LoginActivity : AppCompatActivity() {
         signupLinkBtn.setOnClickListener { view -> run {
             startActivity(Intent(this, SignupActivity::class.java))
         }}
+        login()
 
     }
 
     fun login() {
-        val serverCall : Call<JsonObject>? = loginApi.auth(this.username?.text.toString(), this.password?.text.toString().trim())
+        val serverCall : Call<JsonObject>? = loginApi.auth("client1", "123456")
+        //val serverCall : Call<JsonObject>? = loginApi.auth(this.username?.text.toString(), this.password?.text.toString().trim())
         if(serverCall != null){
             serverCall?.enqueue(object: Callback<JsonObject> {
                 override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
