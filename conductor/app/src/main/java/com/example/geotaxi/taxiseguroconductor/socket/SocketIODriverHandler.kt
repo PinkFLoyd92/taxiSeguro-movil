@@ -111,11 +111,13 @@ class SocketIODriverHandler {
             }
         }.on("ROUTE CHANGE - RESULT") { args ->
             val status = args[0] as String
+            val route = args[1] as JSONObject
             activity.runOnUiThread {
                 activity.progressBarConfirmation?.visibility = View.GONE
                 activity.fabRoutes?.visibility = View.VISIBLE
                 if (status == "ok") {
                     val roadIndexChosen = mapHandler?.getRoadIndexChosen()!!
+                    Route.instance._id = route.getString("_id")
                     Route.instance.currentRoad = mapHandler?.getRoadChosen()
                     Route.instance.currentRoadIndex = roadIndexChosen
                     Route.instance.roads = mapHandler.alternativeRoutes
