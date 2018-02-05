@@ -88,154 +88,154 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
     lateinit var drawerLayout: DrawerLayout
     lateinit var navButton: ImageView
     lateinit var avatarView: CircleImageView
-
+    var canSendPosition = true
+    
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        CalligraphyConfig.initDefault(CalligraphyConfig.Builder()
-                .setDefaultFontPath("fonts/open-sans/OpenSans-Bold.ttf")
-                .setFontAttrId(R.attr.fontPath)
-                .build())
+            super.onCreate(savedInstanceState)
+            CalligraphyConfig.initDefault(CalligraphyConfig.Builder()
+                    .setDefaultFontPath("fonts/open-sans/OpenSans-Bold.ttf")
+                    .setFontAttrId(R.attr.fontPath)
+                    .build())
 
-        val ctx = applicationContext
-        //important! set your user agent to prevent getting banned from the osm servers
-        Configuration.getInstance().userAgentValue = packageName
-        Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
-        setContentView(R.layout.activity_main)
-        toolbar = findViewById(R.id.toolbar)
-        roadApi = OSRMRoadAPI(this)
-        addressCardView = findViewById(R.id.address_card_view)
-        addressRecyclerView = findViewById(R.id.address_recycler_view)
-        taxi_request = findViewById(R.id.taxi_request_button)
-        choose_route = findViewById(R.id.choose_route_btn)
-        fabRoutes = findViewById(R.id.fab_routes)
-        drawerLayout = findViewById(R.id.drawer_layout)
-        avatarView = findViewById<CircleImageView>(R.id.circleView)
-        avatarView.setImageBitmap(Utility.getBitmapFromText("Usuario Sebas", "D", 250, 250))
+            val ctx = applicationContext
+            //important! set your user agent to prevent getting banned from the osm servers
+            Configuration.getInstance().userAgentValue = packageName
+            Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
+            setContentView(R.layout.activity_main)
+            toolbar = findViewById(R.id.toolbar)
+            roadApi = OSRMRoadAPI(this)
+            addressCardView = findViewById(R.id.address_card_view)
+            addressRecyclerView = findViewById(R.id.address_recycler_view)
+            taxi_request = findViewById(R.id.taxi_request_button)
+            choose_route = findViewById(R.id.choose_route_btn)
+            fabRoutes = findViewById(R.id.fab_routes)
+            drawerLayout = findViewById(R.id.drawer_layout)
+            avatarView = findViewById<CircleImageView>(R.id.circleView)
+            avatarView.setImageBitmap(Utility.getBitmapFromText("Usuario Sebas", "D", 250, 250))
 
-        val map = findViewById<MapView>(R.id.map)
-        val searchEV = findViewById<EditText>(R.id.search)
-        val search = findViewById<EditText>(R.id.search)
-        val userIcon = ResourcesCompat.getDrawable(resources, R.drawable.user_location, null)
-        val driverIcon = ResourcesCompat.getDrawable(resources, R.mipmap.taxi_icon, null)
-        val destinationIcon = ResourcesCompat.getDrawable(resources, R.drawable.location_marker, null)
-        val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
-        val geocoderBtn = findViewById<ImageButton>(R.id.geocoder_btn)
-        val cancelRouteActionBtn = findViewById<Button>(R.id.cancel_route_action)
-        val selectingRouteCV = findViewById<CardView>(R.id.selecting_route)
-        val messageLauncher = findViewById<LinearLayout>(R.id.slider_messages)
+            val map = findViewById<MapView>(R.id.map)
+            val searchEV = findViewById<EditText>(R.id.search)
+            val search = findViewById<EditText>(R.id.search)
+            val userIcon = ResourcesCompat.getDrawable(resources, R.drawable.user_location, null)
+            val driverIcon = ResourcesCompat.getDrawable(resources, R.mipmap.taxi_icon, null)
+            val destinationIcon = ResourcesCompat.getDrawable(resources, R.drawable.location_marker, null)
+            val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
+            val geocoderBtn = findViewById<ImageButton>(R.id.geocoder_btn)
+            val cancelRouteActionBtn = findViewById<Button>(R.id.cancel_route_action)
+            val selectingRouteCV = findViewById<CardView>(R.id.selecting_route)
+            val messageLauncher = findViewById<LinearLayout>(R.id.slider_messages)
 
-        chatController = ChatController(
-                chatScene = ChatView.ChatScene(activity = this,
-                        chatList = this.chatList),
-                activity = this,
-                chatList = this.chatList )
-        messageLauncher.setOnClickListener {
-            this.startChatDialog()
-        }
+            chatController = ChatController(
+                    chatScene = ChatView.ChatScene(activity = this,
+                            chatList = this.chatList),
+                    activity = this,
+                    chatList = this.chatList )
+            messageLauncher.setOnClickListener {
+                this.startChatDialog()
+            }
 
 
-        setSupportActionBar(toolbar)
-        navButton = findViewById(R.id.nav_button)
-        navButton.setOnClickListener {
-            drawerLayout.openDrawer(GravityCompat.START)
-        }
+            setSupportActionBar(toolbar)
+            navButton = findViewById(R.id.nav_button)
+            navButton.setOnClickListener {
+                drawerLayout.openDrawer(GravityCompat.START)
+            }
 
-        User.instance.position = startGp
-        bSheetDialog = BottomSheetDialog(this)
-        sheetContentView = View.inflate(this, R.layout.sheet_dialog, null)
-        bSheetDialog?.setContentView(sheetContentView)
-        routeSheetDialog = BottomSheetDialog(this)
-        routeSheetDialog?.setCancelable(false)
-        routeSheetDialog?.setCanceledOnTouchOutside(false)
-        routeSheetView = View.inflate(this, R.layout.route_sheet_dialog, null)
-        routeSheetDialog?.setContentView(routeSheetView)
-        searchEV.setImeActionLabel("Buscar", KeyEvent.KEYCODE_ENTER)
-        searchEV.setOnEditorActionListener(MyEditionActionListener())
-        setOnTouchListener(search)
+            User.instance.position = startGp
+            bSheetDialog = BottomSheetDialog(this)
+            sheetContentView = View.inflate(this, R.layout.sheet_dialog, null)
+            bSheetDialog?.setContentView(sheetContentView)
+            routeSheetDialog = BottomSheetDialog(this)
+            routeSheetDialog?.setCancelable(false)
+            routeSheetDialog?.setCanceledOnTouchOutside(false)
+            routeSheetView = View.inflate(this, R.layout.route_sheet_dialog, null)
+            routeSheetDialog?.setContentView(routeSheetView)
+            searchEV.setImeActionLabel("Buscar", KeyEvent.KEYCODE_ENTER)
+            searchEV.setOnEditorActionListener(MyEditionActionListener())
+            setOnTouchListener(search)
 
-        // use this setting to improve performance if you know that changes
-        // in content do not change the layout size of the RecyclerView
-        addressRecyclerView?.setHasFixedSize(true)
-        // use a linear layout manager
-        val mLayoutManager = LinearLayoutManager(this)
-        addressRecyclerView?.layoutManager = mLayoutManager
-        // add rotation gesture
+            // use this setting to improve performance if you know that changes
+            // in content do not change the layout size of the RecyclerView
+            addressRecyclerView?.setHasFixedSize(true)
+            // use a linear layout manager
+            val mLayoutManager = LinearLayoutManager(this)
+            addressRecyclerView?.layoutManager = mLayoutManager
+            // add rotation gesture
 
-        geocoderBtn.setOnClickListener{
-            locationName = search.text.toString().trim()
-            if (locationName !== "")
-                fillAddressesRecyclerView()
-        }
-        mapHandler = MapHandler(this, mapView = map, userIcon = userIcon,
-                driverIcon = driverIcon, destinationIcon = destinationIcon )
-        sockethandler = SocketIOClientHandler(this, mapHandler!!, roadApi!!)
-        sockethandler!!.initConfiguration()
-
-        chatController.socketHandler = sockethandler!!
-
-        taxi_request?.setOnClickListener { requestTaxi() }
-        choose_route?.setOnClickListener {
-            selectingRouteCV.visibility = View.GONE
-            taxi_request?.visibility = View.VISIBLE
-            fab.visibility = View.VISIBLE
-            fabRoutes?.visibility = View.VISIBLE
-            setSearchLayoutVisibility(View.VISIBLE)
-            routeChosen()
-        }
-        cancelRouteActionBtn.setOnClickListener{
-            fab.visibility = View.VISIBLE
-            fabRoutes?.visibility = View.VISIBLE
-            taxi_request?.visibility = View.VISIBLE
-            choose_route?.isEnabled = false
-            selectingRouteCV.visibility = View.GONE
-            setSearchLayoutVisibility(View.VISIBLE)
-            mapHandler?.clearMapOverlays()
-            mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, endGp!!)
-        }
-        fabRoutes?.setOnClickListener {
-            if (Route.instance.roads!!.size > 1) {
-                fab.visibility = View.GONE
-                fabRoutes?.visibility = View.GONE
-                selectingRouteCV.visibility = View.VISIBLE
+            geocoderBtn.setOnClickListener{
+                locationName = search.text.toString().trim()
+                if (locationName !== "")
+                    fillAddressesRecyclerView()
+            }
+            mapHandler = MapHandler(this, mapView = map, userIcon = userIcon,
+                    driverIcon = driverIcon, destinationIcon = destinationIcon )
+            sockethandler = SocketIOClientHandler(this, mapHandler!!, roadApi!!)
+            sockethandler!!.initConfiguration()
+            chatController.socketHandler = sockethandler!!
+            taxi_request?.setOnClickListener { requestTaxi() }
+            choose_route?.setOnClickListener {
+                selectingRouteCV.visibility = View.GONE
+                taxi_request?.visibility = View.VISIBLE
+                fab.visibility = View.VISIBLE
+                fabRoutes?.visibility = View.VISIBLE
+                setSearchLayoutVisibility(View.VISIBLE)
+                routeChosen()
+            }
+            cancelRouteActionBtn.setOnClickListener{
+                fab.visibility = View.VISIBLE
+                fabRoutes?.visibility = View.VISIBLE
+                taxi_request?.visibility = View.VISIBLE
+                choose_route?.isEnabled = false
+                selectingRouteCV.visibility = View.GONE
+                setSearchLayoutVisibility(View.VISIBLE)
+       
                 mapHandler?.clearMapOverlays()
-                mapHandler?.updateUserIconOnMap(User.instance.position!!)
-                mapHandler?.addDestMarker(endGp!!)
-                mapHandler?.drawRoads(Route.instance.roads!!)
-                taxi_request?.visibility = View.GONE
-                setSearchLayoutVisibility(View.GONE)
-            } else {
-                Toast.makeText(this, "No se encontraron rutas alternativas disponibles", Toast.LENGTH_LONG).show()
+                mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, endGp!!)
             }
-        }
-        fab.setOnClickListener {
-            mapHandler?.animateToLocation(location = User.instance.position, zoomLevel = 17)
-        }
-
-        // check access location permission
-        if (ContextCompat.checkSelfPermission(this,
-                        Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-
-            // Should we show an explanation?
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                            Manifest.permission.ACCESS_FINE_LOCATION)) {
-
-                // Show an explanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
-                showPermissionExplanation()
-                Toast.makeText(this, "Permiso fue denegado", Toast.LENGTH_SHORT).show()
-
-            } else {
-                // No explanation needed, we can request the permission.
-                ActivityCompat.requestPermissions(this,
-                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                        GeoConstant.MY_PERMISSIONS_REQUEST_LOCATION)
+            fabRoutes?.setOnClickListener {
+                if (Route.instance.roads!!.size > 1) {
+                    fab.visibility = View.GONE
+                    fabRoutes?.visibility = View.GONE
+                    selectingRouteCV.visibility = View.VISIBLE
+                    mapHandler?.clearMapOverlays()
+                    mapHandler?.updateUserIconOnMap(User.instance.position!!)
+                    mapHandler?.addDestMarker(endGp!!)
+                    mapHandler?.drawRoads(Route.instance.roads!!)
+                    taxi_request?.visibility = View.GONE
+                    setSearchLayoutVisibility(View.GONE)
+                } else {
+                    Toast.makeText(this, "No se encontraron rutas alternativas disponibles", Toast.LENGTH_LONG).show()
+                }
+            }
+            fab.setOnClickListener {
+                mapHandler?.animateToLocation(location = User.instance.position, zoomLevel = 17)
             }
 
-        } else {
-            initLocationrequest()
-        }
+            // check access location permission
+            if (ContextCompat.checkSelfPermission(this,
+                            Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+
+                // Should we show an explanation?
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                                Manifest.permission.ACCESS_FINE_LOCATION)) {
+
+                    // Show an explanation to the user *asynchronously* -- don't block
+                    // this thread waiting for the user's response! After the user
+                    // sees the explanation, try again to request the permission.
+                    showPermissionExplanation()
+                    Toast.makeText(this, "Permiso fue denegado", Toast.LENGTH_SHORT).show()
+
+                } else {
+                    // No explanation needed, we can request the permission.
+                    ActivityCompat.requestPermissions(this,
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                            GeoConstant.MY_PERMISSIONS_REQUEST_LOCATION)
+                }
+
+            } else {
+                initLocationrequest()
+            }
 
     }
 
@@ -460,7 +460,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         val currentLocation = GeoPoint(location)
         User.instance.position = currentLocation
         mapHandler?.updateUserIconOnMap(currentLocation)
-        if (Route.instance.status in listOf("active", "pending")) {
+        if (Route.instance.status in listOf("active", "pending") && canSendPosition) {
             val data = JsonObject()
             val pos = JsonObject()
             pos.addProperty("longitude", currentLocation.longitude)
@@ -592,7 +592,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                         waypoints = Route.instance.currentRoad!!.mNodes, routeIndex = Route.instance.currentRoadIndex, status = "pending",
                         taxiRequest = true, driver = null, supersededRoute = null)
         if(serverCall != null){
-
+            canSendPosition = false
             serverCall?.enqueue(object: Callback<JsonObject> {
                 override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
                     Log.d("server response", "Failed")
@@ -605,6 +605,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                             val routeId = response.body()?.get("_id")?.asString
                             if (routeId != null) {
                                 Route.instance._id = routeId
+                                canSendPosition = true
                                 Route.instance.status = "pending"
                                 sockethandler!!.socket.emit("JOIN ROUTE", Route.instance._id)
                                 Route.instance.status = "active"
@@ -638,6 +639,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
     private fun routeChosen() {
         val roadChosen = mapHandler?.getRoadChosen()
         if (roadChosen != null) {
+            Log.d("road", "Road chosen not null")
             Route.instance.currentRoad = roadChosen
         }
         Route.instance.currentRoadIndex = mapHandler?.getRoadIndexChosen()!!

@@ -71,7 +71,9 @@ class SocketIOClientHandler(
                             Log.d("error" , args.toString())
                         }
                     }
-                }.on("ROUTE - CHAT") { args ->
+                }.on("CHAT - MONITORS") { args ->
+                    if (args[0] == null)
+                        return@on
                     val obj = args[0] as JSONObject
                     val route_id =  obj.getString("route_id")
                     val role =  obj.getString("role")
