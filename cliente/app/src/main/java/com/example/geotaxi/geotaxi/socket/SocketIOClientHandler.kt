@@ -71,7 +71,7 @@ class SocketIOClientHandler(
                             Log.d("error" , args.toString())
                         }
                     }
-                }.on("CHAT - MONITORS") { args ->
+                }.on("ROUTE - CHAT") { args ->
                     if (args[0] == null)
                         return@on
                     val obj = args[0] as JSONObject
@@ -98,6 +98,8 @@ class SocketIOClientHandler(
                     }
 
                 } .on("CHAT - MONITORS") { args ->
+                    if (args[0] == null)
+                        return@on
                     val obj = args[0] as JSONObject
                     Log.d("obj", obj.toString())
                     val id = obj.getString("_id")
@@ -177,9 +179,10 @@ class SocketIOClientHandler(
                     Log.d("OBJECT: ", "ROUTE HAS FINISHED")
                     Route.instance.status = "inactive"
                     Route.instance.currentRoad = null
-                    mapHandler?.clearMapOverlays()
+
                     activity.runOnUiThread {
-                        mapHandler.closeDestinationWindowInfo()
+                        mapHandler?.clearMapOverlays()
+                        //mapHandler.closeDestinationWindowInfo()
                         activity.setSearchLayoutVisibility(/*Visible default*/)
                         Toast.makeText(activity, "La Ruta ha Finalizado", Toast.LENGTH_SHORT).show()
                         mapHandler?.updateUserIconOnMap(User.instance.position!!)
