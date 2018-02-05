@@ -3,6 +3,7 @@ package com.example.geotaxi.geotaxi.API.endpoints
 import android.content.Context
 import android.location.Address
 import android.os.AsyncTask
+import com.example.geotaxi.geotaxi.config.Env
 import org.osmdroid.bonuspack.location.GeocoderNominatim
 import java.io.IOException
 import java.util.*
@@ -23,7 +24,7 @@ class GeocoderNominatimAPI {
         override fun doInBackground(vararg params: Context?): List<Address> {
             val geoNominatim = GeocoderNominatim(Locale.getDefault(), System.getProperty("http.agent"))
             //uncomment for use own server
-            // geoNominatim.setService(Env.NOMINATIM_SERVER_URL)
+            geoNominatim.setService(Env.NOMINATIM_SERVER_URL)
             var addresses = listOf<Address>()
             try {
                 addresses = geoNominatim.getFromLocationName(locationName,10, -1.97166,

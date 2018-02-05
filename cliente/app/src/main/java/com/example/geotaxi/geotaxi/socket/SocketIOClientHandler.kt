@@ -68,6 +68,8 @@ class SocketIOClientHandler(
                         }
                     }
                 }.on("CHAT - MONITORS") { args ->
+                    if (args[0] == null)
+                        return@on
                     val obj = args[0] as JSONObject
                     Log.d("obj", obj.toString())
                     val id = obj.getString("_id")
