@@ -16,7 +16,6 @@ import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.content.Intent
 import android.content.IntentSender
-import android.media.Image
 import android.support.design.widget.BottomSheetDialog
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.DialogFragment
@@ -67,7 +66,6 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
     var roadApi: OSRMRoadAPI? = null
     var routeAPI: RouteAPI = RouteAPI()
     var startGp: GeoPoint = GeoPoint(-2.1811931,-79.8765573)//Guayaquil
-    var endGp: GeoPoint? = null
     var locationName = ""
     var mapHandler: MapHandler? = null
     var addressRecyclerView: RecyclerView? = null
@@ -174,6 +172,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
             chatController.socketHandler = sockethandler!!
             taxi_request?.setOnClickListener { requestTaxi() }
             choose_route?.setOnClickListener {
+                mapHandler?.isChoosingDestination = true
                 selectingRouteCV.visibility = View.GONE
                 taxi_request?.visibility = View.VISIBLE
                 fab.visibility = View.VISIBLE
@@ -182,6 +181,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                 routeChosen()
             }
             cancelRouteActionBtn.setOnClickListener{
+                mapHandler?.isChoosingDestination = true
                 fab.visibility = View.VISIBLE
                 fabRoutes?.visibility = View.VISIBLE
                 taxi_request?.visibility = View.VISIBLE
@@ -190,16 +190,20 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                 setSearchLayoutVisibility(View.VISIBLE)
        
                 mapHandler?.clearMapOverlays()
-                mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, endGp!!)
+                mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
             }
             fabRoutes?.setOnClickListener {
                 if (Route.instance.roads!!.size > 1) {
+                    choose_route?.setTextColor(
+                            ResourcesCompat.getColor(resources!!, R.color.dark_gray, null)
+                    )
+                    mapHandler?.isChoosingDestination = false
                     fab.visibility = View.GONE
                     fabRoutes?.visibility = View.GONE
                     selectingRouteCV.visibility = View.VISIBLE
                     mapHandler?.clearMapOverlays()
                     mapHandler?.updateUserIconOnMap(User.instance.position!!)
-                    mapHandler?.addDestMarker(endGp!!)
+                    mapHandler?.addDestMarker(Route.instance.end!!)
                     mapHandler?.drawRoads(Route.instance.roads!!)
                     taxi_request?.visibility = View.GONE
                     setSearchLayoutVisibility(View.GONE)
@@ -252,7 +256,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         val cancelRouteBtn = routeSheetView?.findViewById<Button>(R.id.route_cancel)
         cancelRouteBtn?.setOnClickListener{
             mapHandler?.clearMapOverlays()
-            mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, endGp!!)
+            mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
             routeSheetDialog?.dismiss()
             val route = JSONObject()
             route.put("routeId", Route.instance._id)
@@ -268,7 +272,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
 
     private fun allowRouteChange(routeIndex: Int, newRoads: Array<out Road>) {
         val serverCall = routeAPI.createRoute(
-                            location = User.instance.position!!, destination = endGp!!, client = User.instance._id,
+                            location = User.instance.position!!, destination = Route.instance.end!!, client = User.instance._id,
                             waypoints = newRoads[routeIndex].mNodes, routeIndex = routeIndex, status = "active",
                             taxiRequest = false, driver = Driver.instance._id, supersededRoute = Route.instance._id)
         if(serverCall != null){
@@ -290,7 +294,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                             Route.instance.currentRoadIndex = routeIndex
 
                             mapHandler?.clearMapOverlays()
-                            mapHandler?.drawRoad(newRoads[routeIndex], User.instance.position!!, endGp!!)
+                            mapHandler?.drawRoad(newRoads[routeIndex], User.instance.position!!, Route.instance.end!!)
                         }
                     }
                 }
@@ -536,7 +540,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
     private fun fillAddressesRecyclerView() {
         val addresses = geocoderApi!!.fromLocationName(locationName)
         if (addresses.isNotEmpty()) {
-            endGp = GeoPoint(addresses.get(0).latitude, addresses.get(0).longitude)
+            Route.instance.end = GeoPoint(addresses.get(0).latitude, addresses.get(0).longitude)
             // specify an adapter
             val mAdapter = AddressListViewAdapter(addresses, MyRVClickListener())
             addressRecyclerView?.setAdapter(mAdapter)
@@ -557,11 +561,11 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         override fun onClick(v: View?) {
             val geoPointStr = v?.findViewById<TextView>(R.id.location_tv)?.text.toString()
             var geoPointList = geoPointStr.split(",").map { it.trim() }
-            endGp = GeoPoint((geoPointList[0]).toDouble(), geoPointList[1].toDouble())
+            Route.instance.end = GeoPoint((geoPointList[0]).toDouble(), geoPointList[1].toDouble())
             addressCardView?.visibility = View.GONE
             mapHandler?.clearMapOverlays()
             //calculate and draw road on map
-            val ok = executeRoadTask(User.instance.position!!, endGp!!)
+            val ok = executeRoadTask(User.instance.position!!, Route.instance.end!!)
             if (ok) {
                 taxi_request?.visibility = View.VISIBLE
             }
@@ -588,7 +592,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         waitingDriver.visibility = View.VISIBLE
         val serverCall =
                 routeAPI.createRoute(
-                        location = User.instance.position!!, destination = endGp!!, client = User.instance._id,
+                        location = User.instance.position!!, destination = Route.instance.end!!, client = User.instance._id,
                         waypoints = Route.instance.currentRoad!!.mNodes, routeIndex = Route.instance.currentRoadIndex, status = "pending",
                         taxiRequest = true, driver = null, supersededRoute = null)
         if(serverCall != null){
@@ -604,9 +608,10 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                         try {
                             val routeId = response.body()?.get("_id")?.asString
                             if (routeId != null) {
+                                sockethandler?.isFirstDriverPosition = true
+                                mapHandler?.isChoosingDestination = false
                                 Route.instance._id = routeId
                                 canSendPosition = true
-                                Route.instance.status = "pending"
                                 sockethandler!!.socket.emit("JOIN ROUTE", Route.instance._id)
                                 Route.instance.status = "active"
                                 Log.d("activity",String.format("id route response %s ", response.body().toString()))
@@ -623,8 +628,6 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                         }
                     } else {
                         sockethandler!!.socket.emit("ROUTE DELETE", User.instance._id)
-                        val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)
-                        fab.visibility = View.GONE
                         waitingDriver.visibility  = View.GONE
                         Toast.makeText(applicationContext, "No hay conductores disponibles", Toast.LENGTH_SHORT).show()
                     }
@@ -644,7 +647,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         }
         Route.instance.currentRoadIndex = mapHandler?.getRoadIndexChosen()!!
         mapHandler?.clearMapOverlays()
-        mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, endGp!!)
+        mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
     }
 
     fun setSearchLayoutVisibility(visibility: Int = View.VISIBLE) {

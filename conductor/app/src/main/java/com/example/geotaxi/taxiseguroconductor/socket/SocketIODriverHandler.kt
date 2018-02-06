@@ -130,8 +130,8 @@ class SocketIODriverHandler {
             }
         }.on("ROUTE - FINISH") {
             Route.instance.status = "inactive"
-            mapHandler.clearMapOverlays()
             activity.runOnUiThread {
+                mapHandler.clearMapOverlays()
                 mapHandler?.updateDriverIconOnMap(User.instance.position!!)
                 Toast.makeText(activity, "La Ruta ha Finalizado", Toast.LENGTH_SHORT).show()
             }

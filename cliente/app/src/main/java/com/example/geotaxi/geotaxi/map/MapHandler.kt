@@ -10,10 +10,13 @@ import com.example.geotaxi.geotaxi.ui.MainActivity
 import org.osmdroid.api.IMapController
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
+import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.gestures.RotationGestureOverlay
 import org.osmdroid.views.overlay.infowindow.InfoWindow
@@ -32,6 +35,7 @@ class MapHandler {
     private var roadChosen : Road? = null
     private var roadChosenIndex: Int = 0
     private var ROAD_COLORS: HashMap<String, Int> = hashMapOf()
+    var isChoosingDestination: Boolean = true
 
     constructor(activity: MainActivity,
                 mapView: MapView?,
@@ -51,9 +55,9 @@ class MapHandler {
         mapView?.overlays?.add(mRotationGestureOverlay)
         mapController?.setCenter(User.instance.position)
         mapController?.setZoom(17)
-        userMarker?.setIcon(userIcon)
-        driverMarker?.setIcon(driverIcon)
-        destinationMarker?.setIcon(destinationIcon)
+        userMarker.setIcon(userIcon)
+        driverMarker.setIcon(driverIcon)
+        destinationMarker.setIcon(destinationIcon)
         this.activity = activity
         this.map = mapView
         this.mapController = mapController
@@ -64,6 +68,54 @@ class MapHandler {
                 "chosen" to ResourcesCompat.getColor(activity.resources, R.color.chosenRoute, null),
                 "alternative" to ResourcesCompat.getColor(activity.resources, R.color.alternativeRoute, null)
                 )
+
+        initMapEventsOverlay()
+    }
+
+    private fun initMapEventsOverlay() {
+        destinationMarker?.isDraggable = true
+        destinationMarker?.dragOffset = 8F
+        destinationMarker?.setOnMarkerDragListener(object: Marker.OnMarkerDragListener{
+            override fun onMarkerDragStart(marker: Marker?) {
+
+            }
+
+            override fun onMarkerDrag(marker: Marker?) {
+
+            }
+
+            override fun onMarkerDragEnd(marker: Marker?) {
+                if (isChoosingDestination) {
+                    val endPos = marker?.position
+                    clearMapOverlays()
+                    val ok = activity!!.executeRoadTask(User.instance.position!!, endPos!!)
+                    if (ok) {
+                        activity!!.taxi_request?.visibility = View.VISIBLE
+                    }
+                } else {
+                    marker?.position = Route.instance.end
+                }
+            }
+        })
+
+        val mapEventsReceiver = object: MapEventsReceiver {
+            override fun longPressHelper(p: GeoPoint?): Boolean {
+                if (isChoosingDestination) {
+                    clearMapOverlays()
+                    map?.overlays?.add(destinationMarker)
+                    val ok = activity!!.executeRoadTask(User.instance.position!!, p!!)
+                    if (ok) {
+                        activity!!.taxi_request?.visibility = View.VISIBLE
+                    }
+                }
+                return false
+            }
+            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                return false
+            }
+        }
+        val overlaysEvents = MapEventsOverlay(mapEventsReceiver)
+        map?.overlays?.add(overlaysEvents)
     }
 
     fun updateUserIconOnMap(location: GeoPoint) {
@@ -89,6 +141,9 @@ class MapHandler {
         }
     }
     fun drawRoad(road: Road, userPos: GeoPoint, destinationPos: GeoPoint) {
+        if (roadOverlays.isNotEmpty()) {
+            roadOverlays.clear()
+        }
         if (!road.mNodes.isEmpty()) {
             val roadOverlay = RoadManager.buildRoadOverlay(road)
             roadOverlay.color = ROAD_COLORS["chosen"]!!
@@ -117,6 +172,7 @@ class MapHandler {
             roadOverlay.showInfoWindow(infoPos)
             map?.zoomToBoundingBox(road.mBoundingBox, true)
             map?.invalidate()
+            roadOverlays.add(roadOverlay)
         }
     }
 
@@ -176,7 +232,7 @@ class MapHandler {
             }
             roadIndex += 1
         }
-        map?.overlays?.add(roadOverlays[roadChosenIndex])
+        map?.overlays?.add(roadOverlays[Route.instance.currentRoadIndex])
     }
 
     fun drawDriverRequestRoad(road: Road) {
@@ -198,12 +254,16 @@ class MapHandler {
             roadOverlay.showInfoWindow(infoPos)
             map?.zoomToBoundingBox(road.mBoundingBox, true)
             map?.invalidate()
+            roadOverlays.add(roadOverlay)
         }
     }
 
     private fun onRoadChosen(roadOverlay: Polyline, road: Road) {
         var indx = 0
         activity?.choose_route?.isEnabled = true
+        activity?.choose_route?.setTextColor(
+                ResourcesCompat.getColor(activity?.resources!!, R.color.colorAccent, null)
+        )
         roadOverlays.forEach {
             if (it != roadOverlay) {
                 it.color = ROAD_COLORS["alternative"]!!
@@ -228,22 +288,28 @@ class MapHandler {
     fun addDestMarker(destPos: GeoPoint) {
         destinationMarker?.position = destPos
         destinationMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        //infoMarker.snippet = ("%.2f".format(road.mDuration/60)) + " min"
-        //infoMarker.subDescription = ("%.2f".format(road.mLength)) + " km"
-        //infoMarker.title = "."
-        //infoMarker.setIcon(null)
-        //infoMarker.infoWindow = infoWindow
         map?.overlays?.add(destinationMarker)
-        //infoMarker.infoWindow.open(infoMarker, infoPos, 2,2)
+    }
+
+    fun resetMapOverlays() {
+        map?.overlays?.clear()
+        InfoWindow.closeAllInfoWindowsOn(map)
+        initMapEventsOverlay()
     }
 
     fun clearMapOverlays() {
-        map?.overlays?.clear()
+        removeMapOverlay(destinationMarker!!)
+        removeMapOverlay(driverMarker!!)
+        if (roadOverlays.isNotEmpty()) {
+            roadOverlays.forEach { roadOverlay ->
+                removeMapOverlay(roadOverlay)
+            }
+        }
         InfoWindow.closeAllInfoWindowsOn(map)
     }
 
-    fun closeDestinationWindowInfo() {
-        if (destinationMarker?.isInfoWindowShown!!)
-            destinationMarker?.closeInfoWindow()
+    fun removeMapOverlay(overlay: Overlay) {
+        map?.overlays?.remove(overlay)
     }
+
 }
