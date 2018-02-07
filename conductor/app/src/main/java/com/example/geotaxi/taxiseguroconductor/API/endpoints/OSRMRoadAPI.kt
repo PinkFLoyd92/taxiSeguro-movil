@@ -1,14 +1,14 @@
-package com.example.geotaxi.geotaxi.API.endpoints
+package com.example.geotaxi.taxiseguroconductor.API.endpoints
 
 import android.content.Context
 import android.os.AsyncTask
-import com.example.geotaxi.geotaxi.API.OSRMAPI
-import com.example.geotaxi.geotaxi.API.OsrmAPI
+import com.example.geotaxi.taxiseguroconductor.API.OSRMAPI
+import com.example.geotaxi.taxiseguroconductor.API.OsrmAPI
 import org.osmdroid.util.GeoPoint
 import retrofit2.Response
 
 /**
- * Created by dieropal on 17/01/18.
+ * Created by dieropal on 07/02/18.
  */
 class OSRMRoadAPI {
     private val osrmretrofit = OSRMAPI.retrofit

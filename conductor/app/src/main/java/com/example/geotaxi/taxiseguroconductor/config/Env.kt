@@ -34,5 +34,6 @@ class Env {
         val LR_PRIORITY = LocationRequest.PRIORITY_HIGH_ACCURACY
         val MY_PERMISSIONS_REQUEST_LOCATION = 1
         val REQUEST_CHECK_SETTINGS = 1
+        val OSRM_ROUTES = IP() + ":5000/"
     }
 }

@@ -6,7 +6,6 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import co.intentservice.chatui.models.ChatMessage
-import com.example.geotaxi.geotaxi.API.endpoints.OSRMRoadAPI
 import com.example.geotaxi.geotaxi.R
 import com.example.geotaxi.geotaxi.chat.ChatMapped
 import com.example.geotaxi.geotaxi.config.Env
@@ -19,7 +18,6 @@ import com.google.gson.JsonObject
 import io.socket.client.IO
 import io.socket.client.Socket
 import org.json.JSONObject
-import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.util.GeoPoint
 import java.util.*
 import java.util.concurrent.ExecutionException
@@ -29,8 +27,7 @@ import java.util.concurrent.ExecutionException
  */
 class SocketIOClientHandler(
         private val activity: MainActivity,
-        private val mapHandler: MapHandler,
-        private val roadApi: OSRMRoadAPI) {
+        private val mapHandler: MapHandler) {
 
     val socket = IO.socket(Env.SOCKET_SERVER_URL)
     var isFirstDriverPosition = true
@@ -163,12 +160,11 @@ class SocketIOClientHandler(
             val routeIndex = obj.getInt("routeIndex")
             val longitude = obj.getJSONObject("start").getDouble("longitude")
             val latitude = obj.getJSONObject("start").getDouble("latitude")
-            val roadsRusult = roadApi?.getRoad(GeoPoint(latitude, longitude), Route.instance.end!!)
-            if (roadsRusult != null && roadsRusult.isNotEmpty()
-                    && roadsRusult[0].mStatus == Road.STATUS_OK) {
-                activity.runOnUiThread {
-                    mapHandler.drawDriverRequestRoad(roadsRusult[routeIndex])
-                    activity.showRouteSheetDialog(routeIndex, roadsRusult)
+            activity.runOnUiThread {
+                val roads = activity.roadHandler.executeRoadTask(GeoPoint(latitude, longitude), Route.instance.end!!)
+                if (roads != null && roads.isNotEmpty()) {
+                    mapHandler.drawDriverRequestRoad(Route.instance.roads!![routeIndex])
+                    activity.showRouteSheetDialog(routeIndex, Route.instance.roads!!)
                 }
             }
 
@@ -222,8 +218,8 @@ class SocketIOClientHandler(
             endLoc?.latitude = obj.getJSONObject("end").getJSONArray("coordinates").get(1)  as Double
             Route.instance.end = GeoPoint(endLoc)
             activity.runOnUiThread{
-                val ok = activity.executeRoadTask(endGp = Route.instance.end as GeoPoint, startGp = Route.instance.start as GeoPoint)
-                if (ok) {
+                val roads = activity.roadHandler.executeRoadTask(endGp = Route.instance.end as GeoPoint, startGp = Route.instance.start as GeoPoint)
+                if (roads != null && roads.isNotEmpty()) {
                     activity.setSearchLayoutVisibility(View.GONE)
                 }
             }

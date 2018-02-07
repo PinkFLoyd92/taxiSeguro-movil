@@ -80,17 +80,25 @@ class SocketIODriverHandler {
                 endLoc.longitude  = obj.getJSONObject("route").getJSONObject("end").getJSONArray("coordinates").get(0) as Double
                 val start = GeoPoint(startLoc)
                 val end = GeoPoint(endLoc)
+                Route.instance.start = start
+                Route.instance.end = end
+                mapHandler.destPosition = end
                 val clientGeo = GeoPoint(clientLoc)
                 Client.instance.position = clientGeo
-                mapHandler.executeRoadTask(activity, start, end) // creating the road.
-                socket.emit("JOIN ROUTE", routeId)
-                activity.runOnUiThread(object: Runnable {
-                    override fun run() {
+                val roads = activity.roadHandler.executeRoadTask(start, end) // creating the road.
+                if (roads != null) {
+                    Route.instance.currentRoad = roads[Route.instance.currentRoadIndex]
+                    Route.instance.roads = roads
+                    socket.emit("JOIN ROUTE", routeId)
+                    activity.runOnUiThread {
+                        mapHandler.drawRoad(roads[Route.instance.currentRoadIndex], Route.instance.start!!)
+                        activity.fabRoutes?.visibility = View.VISIBLE
                         activity.findViewById<TextView>(R.id.input_nombre_cliente).text = Client.instance.name
                         activity.findViewById<TextView>(R.id.input_ubicacion_cliente).text = Client.instance.position?.toString()
                         activity.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.VISIBLE
                     }
-                })
+                }
+
             }catch (exception: ExecutionException){
                 Log.d("error" , args.toString())
             }

@@ -1,17 +1,20 @@
-package com.example.geotaxi.geotaxi.API
+package com.example.geotaxi.taxiseguroconductor.API
 
 import android.util.Log
-import com.example.geotaxi.geotaxi.config.Env
-import com.google.gson.JsonObject
+import com.example.geotaxi.taxiseguroconductor.config.Env
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.Call
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.*
+import retrofit2.converter.scalars.ScalarsConverterFactory
+import retrofit2.http.GET
+import retrofit2.http.Path
 import java.io.IOException
 
-class API {
+/**
+ * Created by dieropal on 07/02/18.
+ */
+class OSRMAPI {
     companion object {
         val client = OkHttpClient.Builder()
                 .addInterceptor(HTTPInterceptor())
@@ -19,8 +22,8 @@ class API {
 
         //route request to orsm server
         val retrofit = Retrofit.Builder()
-                .baseUrl(Env.API_BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
+                .baseUrl(Env.OSRM_ROUTES)
+                .addConverterFactory(ScalarsConverterFactory.create())
                 .client(client)
                 .build()
 
@@ -42,37 +45,11 @@ class API {
     }
 }
 
-interface ServerAPI {
-    @Headers( "Content-Type: application/json" )
-    @POST("routes/")
-    fun createRoute(
-            @Body body: JsonObject
-            ): Call<JsonObject>
-
-    @Headers( "Content-Type: application/json" )
-    @PUT("routes/{id}")
-    fun updateRoute(
-            @Path("id") id: String,
-            @Body body: JsonObject
-    ): Call<JsonObject>
-
-    @Headers( "Content-Type: application/json" )
-    @POST("users/")
-    fun createUser(
-            @Body body: JsonObject
-    ): Call<JsonObject>
-
-    @Headers( "Content-Type: application/json" )
-    @POST("users/auth")
-    fun authUser(
-            @Body body: JsonObject
-    ): Call<JsonObject>
-
-    @GET("route/v1/car/{fromLong},{fromLat};{toLong},{toLat}?alternatives=3&overview=false&geometries=polyline&steps=true&annotations=true")
+interface OsrmAPI {
+    @GET("route/v1/car/{fromLong},{fromLat};{toLong},{toLat}?alternatives=true&overview=full&geometries=polyline&steps=true&annotations=true")
     fun getOsrmRoutes(
             @Path("fromLong") fromLong: String,
             @Path("fromLat") fromLat: String,
             @Path("toLong") toLong: String,
-            @Path("toLat") toLat: String,
-            @Path("number") number: String): Call<JsonObject>
+            @Path("toLat") toLat: String): Call<String>
 }

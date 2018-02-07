@@ -88,8 +88,13 @@ class MapHandler {
                 if (isChoosingDestination) {
                     val endPos = marker?.position
                     clearMapOverlays()
-                    val ok = activity!!.executeRoadTask(User.instance.position!!, endPos!!)
-                    if (ok) {
+                    val roads = activity!!.roadHandler.executeRoadTask(User.instance.position!!, endPos!!)
+                    if (roads != null && roads.isNotEmpty()
+                            && roads[0].mStatus == Road.STATUS_OK) {
+                        Route.instance.currentRoad = roads[0]
+                        Route.instance.roads = roads
+                        drawRoad(roads[0], User.instance.position!!, Route.instance.end!!)
+                        activity!!.fabRoutes?.visibility = View.VISIBLE
                         activity!!.taxi_request?.visibility = View.VISIBLE
                     }
                 } else {
@@ -103,8 +108,13 @@ class MapHandler {
                 if (isChoosingDestination) {
                     clearMapOverlays()
                     map?.overlays?.add(destinationMarker)
-                    val ok = activity!!.executeRoadTask(User.instance.position!!, p!!)
-                    if (ok) {
+                    val roads = activity!!.roadHandler.executeRoadTask(User.instance.position!!, p!!)
+                    if (roads != null && roads.isNotEmpty()
+                            && roads[0].mStatus == Road.STATUS_OK) {
+                        Route.instance.currentRoad = roads[0]
+                        Route.instance.roads = roads
+                        drawRoad(roads[0], User.instance.position!!, Route.instance.end!!)
+                        activity!!.fabRoutes?.visibility = View.VISIBLE
                         activity!!.taxi_request?.visibility = View.VISIBLE
                     }
                 }
@@ -176,7 +186,7 @@ class MapHandler {
         }
     }
 
-    fun drawRoads(roads: kotlin.Array<out Road>) {
+    fun drawRoads(roads: ArrayList<out Road>) {
         var roadIndex = 0
         var roadColor = ROAD_COLORS["chosen"]
         if (roadOverlays.isNotEmpty()) {

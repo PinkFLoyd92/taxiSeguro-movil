@@ -1,20 +1,15 @@
 package com.example.geotaxi.taxiseguroconductor.map
 
-import android.app.Activity
-import android.content.Context
 import android.location.Location
-import android.os.AsyncTask
 import android.support.v4.content.res.ResourcesCompat
 import android.util.Log
 import android.view.View
 import com.example.geotaxi.taxiseguroconductor.R
-import com.example.geotaxi.taxiseguroconductor.config.Env
 import com.example.geotaxi.taxiseguroconductor.data.Route
 import com.example.geotaxi.taxiseguroconductor.data.User
 import com.example.geotaxi.taxiseguroconductor.ui.MainActivity
 import org.json.JSONObject
 import org.osmdroid.api.IMapController
-import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.util.GeoPoint
@@ -36,7 +31,7 @@ class MapHandler {
     var mapController: IMapController? = null
     var mCurrentLocation: GeoPoint? = null
     var destPosition: GeoPoint? = null
-    var alternativeRoutes: Array<out Road> = arrayOf()
+    var alternativeRoutes: ArrayList<out Road> = arrayListOf()
     private var roadOverlays = mutableListOf<Polyline>()
     private var roadChosen : Road? = null
     private var roadChosenIndex: Int = 0
@@ -97,73 +92,6 @@ class MapHandler {
         }
     }
 
-    fun executeRoadTask(activity: Activity, start: GeoPoint, end: GeoPoint){
-        val roadTask = RoadTask(start, end)
-        roadTask.execute(activity)
-    }
-
-    inner class RoadTask : AsyncTask<Context, Void, Array<out Road>?> {
-        var start:GeoPoint? = null
-        var end:GeoPoint? = null
-        constructor(start: GeoPoint, end: GeoPoint) : super() {
-            this.start = start
-            this.end = end
-        }
-
-        override fun doInBackground(vararg params: Context?): Array<out Road>? {
-            val roadManager = OSRMRoadManager(params[0])
-            val wayPoints = ArrayList<GeoPoint>(0)
-            if (this.end != null && this.start != null) {
-                wayPoints.add(this.start as GeoPoint)
-                wayPoints.add(this.end as GeoPoint)
-
-                //uncomment for use own server
-                roadManager.setService(Env.OSRM_SERVER_URL)
-
-                return roadManager.getRoads(wayPoints)
-            }
-            return null
-        }
-
-        override fun onPostExecute(result: Array<out Road>?) {
-            super.onPostExecute(result)
-            if (result != null && result.isNotEmpty()
-                    && result[0].mStatus == Road.STATUS_OK) {
-                // currentRoad = result
-                destPosition = end
-                drawRoad(result[Route.instance.currentRoadIndex],start = this.start as GeoPoint)
-                activity?.fabRoutes?.visibility = View.VISIBLE
-                Route.instance.currentRoad = result[Route.instance.currentRoadIndex]
-                Route.instance.start = this.start
-                Route.instance.end = this.end
-                Route.instance.roads = result
-            }
-        }
-    }
-
-    fun getAlternativeRoutes(start: GeoPoint, end: GeoPoint): Array<out Road>?{
-        val roads = AlternativeRoutesTask(start, end)
-        return roads.execute().get()
-    }
-
-    inner class AlternativeRoutesTask : AsyncTask<Context, Void, Array<out Road>?> {
-        var start:GeoPoint? = null
-        var end:GeoPoint? = null
-        constructor(start: GeoPoint, end: GeoPoint) : super() {
-            this.start = start
-            this.end = end
-        }
-        override fun doInBackground(vararg params: Context?): Array<out Road>? {
-            val roadManager = OSRMRoadManager(activity)
-            val wayPoints = ArrayList<GeoPoint>(0)
-            wayPoints.add(this.start as GeoPoint)
-            wayPoints.add(this.end as GeoPoint)
-            //uncomment for use own server
-            roadManager.setService(Env.OSRM_SERVER_URL)
-            return roadManager.getRoads(wayPoints)
-        }
-    }
-
     fun drawRoad(road: Road, start:GeoPoint) {
         var roadOverlay = RoadManager.buildRoadOverlay(road)
         roadOverlay.color = ROAD_COLORS["chosen"]!!
@@ -194,7 +122,7 @@ class MapHandler {
         map?.invalidate()
     }
 
-    fun drawRoads(roads: kotlin.Array<out Road>) {
+    fun drawRoads(roads: ArrayList<out Road>) {
         var roadIndex = 0
         var roadColor = ROAD_COLORS["chosen"]
         if (roadOverlays.isNotEmpty()) {
@@ -278,7 +206,7 @@ class MapHandler {
         return roadChosenIndex
     }
 
-    fun initRouteAtLaunch(activity: Activity, obj: JSONObject) {
+    fun initRouteAtLaunch(activity: MainActivity, obj: JSONObject) {
         val startLoc: Location? = Location("")
         val endLoc: Location? = Location("")
         try {
@@ -294,7 +222,14 @@ class MapHandler {
             endLoc?.latitude = obj.getJSONObject("end").getJSONArray("coordinates").get(1)  as Double
             Route.instance.end = GeoPoint(endLoc)
 
-            this.executeRoadTask(activity = activity, end = Route.instance.end as GeoPoint, start = Route.instance.start as GeoPoint)
+            val roads = activity.roadHandler.executeRoadTask(Route.instance.start!!, Route.instance.end!!)
+            if (roads != null) {
+                destPosition = GeoPoint(endLoc)
+                drawRoad(roads[Route.instance.currentRoadIndex], Route.instance.start!!)
+                activity?.fabRoutes?.visibility = View.VISIBLE
+                Route.instance.currentRoad = roads[Route.instance.currentRoadIndex]
+                Route.instance.roads = roads
+            }
         }catch (e : Exception) {
             Log.d("error", e.message)
         }

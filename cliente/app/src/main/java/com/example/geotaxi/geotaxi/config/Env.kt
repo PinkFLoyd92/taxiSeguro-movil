@@ -25,5 +25,6 @@ class Env {
         val NOMINATIM_SERVER_URL = IP() + ":80/nominatim/"
         val API_BASE_URL = IP() + ":4000/v1/"
         val SOCKET_SERVER_URL = IP() + ":9000/"
+        val OSRM_ROUTES = IP() + ":5000/"
     }
 }

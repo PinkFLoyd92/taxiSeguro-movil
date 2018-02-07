@@ -34,6 +34,7 @@ import com.example.geotaxi.geotaxi.API.endpoints.GeocoderNominatimAPI
 import com.example.geotaxi.geotaxi.API.endpoints.OSRMRoadAPI
 import com.example.geotaxi.geotaxi.API.endpoints.RouteAPI
 import com.example.geotaxi.geotaxi.R
+import com.example.geotaxi.geotaxi.Road.RoadHandler
 import com.example.geotaxi.geotaxi.chat.controller.ChatController
 import com.example.geotaxi.geotaxi.chat.model.ChatList
 import com.example.geotaxi.geotaxi.chat.view.ChatDialog
@@ -87,6 +88,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
     lateinit var navButton: ImageView
     lateinit var avatarView: CircleImageView
     var canSendPosition = true
+    lateinit var roadHandler: RoadHandler
     
     override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
@@ -101,7 +103,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
             Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
             setContentView(R.layout.activity_main)
             toolbar = findViewById(R.id.toolbar)
-            roadApi = OSRMRoadAPI(this)
+            roadApi = OSRMRoadAPI()
             addressCardView = findViewById(R.id.address_card_view)
             addressRecyclerView = findViewById(R.id.address_recycler_view)
             taxi_request = findViewById(R.id.taxi_request_button)
@@ -167,7 +169,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
             }
             mapHandler = MapHandler(this, mapView = map, userIcon = userIcon,
                     driverIcon = driverIcon, destinationIcon = destinationIcon )
-            sockethandler = SocketIOClientHandler(this, mapHandler!!, roadApi!!)
+            roadHandler = RoadHandler()
+            sockethandler = SocketIOClientHandler(this, mapHandler!!)
             sockethandler!!.initConfiguration()
             chatController.socketHandler = sockethandler!!
             taxi_request?.setOnClickListener { requestTaxi() }
@@ -251,7 +254,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         bSheetDialog?.show()
     }
 
-    fun showRouteSheetDialog(routeIndex: Int, newRoads: Array<out Road>) {
+    fun showRouteSheetDialog(routeIndex: Int, newRoads: ArrayList<out Road>) {
         val okRouteBtn = routeSheetView?.findViewById<Button>(R.id.route_ok)
         val cancelRouteBtn = routeSheetView?.findViewById<Button>(R.id.route_cancel)
         cancelRouteBtn?.setOnClickListener{
@@ -270,10 +273,10 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         routeSheetDialog?.show()
     }
 
-    private fun allowRouteChange(routeIndex: Int, newRoads: Array<out Road>) {
+    private fun allowRouteChange(routeIndex: Int, newRoads: ArrayList<out Road>) {
         val serverCall = routeAPI.createRoute(
                             location = User.instance.position!!, destination = Route.instance.end!!, client = User.instance._id,
-                            waypoints = newRoads[routeIndex].mNodes, routeIndex = routeIndex, status = "active",
+                            points = newRoads[routeIndex].mNodes, routeIndex = routeIndex, status = "active",
                             taxiRequest = false, driver = Driver.instance._id, supersededRoute = Route.instance._id)
         if(serverCall != null){
             serverCall?.enqueue(object: Callback<JsonObject> {
@@ -565,27 +568,19 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
             addressCardView?.visibility = View.GONE
             mapHandler?.clearMapOverlays()
             //calculate and draw road on map
-            val ok = executeRoadTask(User.instance.position!!, Route.instance.end!!)
-            if (ok) {
+            val roads = roadHandler.executeRoadTask(User.instance.position!!, Route.instance.end!!)
+            if (roads != null && roads.isNotEmpty()
+                    && roads[0].mStatus == Road.STATUS_OK) {
+                Route.instance.currentRoad = roads[0]
+                Route.instance.roads = roads
+                mapHandler?.drawRoad(roads[0], User.instance.position!!, Route.instance.end!!)
+                fabRoutes?.visibility = View.VISIBLE
                 taxi_request?.visibility = View.VISIBLE
             }
         }
 
     }
 
-    fun executeRoadTask(startGp: GeoPoint, endGp: GeoPoint): Boolean{
-        val roadsRusult = roadApi?.getRoad(startGp, endGp!!)
-        if (roadsRusult != null && roadsRusult.isNotEmpty()
-                && roadsRusult[0].mStatus == Road.STATUS_OK) {
-            Route.instance.currentRoad = roadsRusult[0]
-            Route.instance.roads = roadsRusult
-            Route.instance.end = endGp
-            mapHandler?.drawRoad(roadsRusult[0], User.instance.position!!, endGp!!)
-            fabRoutes?.visibility = View.VISIBLE
-            return true
-        }
-        return false
-    }
 
     private fun requestTaxi() {
         val waitingDriver = findViewById<CardView>(R.id.waiting_driver_cv)
@@ -593,7 +588,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         val serverCall =
                 routeAPI.createRoute(
                         location = User.instance.position!!, destination = Route.instance.end!!, client = User.instance._id,
-                        waypoints = Route.instance.currentRoad!!.mNodes, routeIndex = Route.instance.currentRoadIndex, status = "pending",
+                        points = Route.instance.currentRoad!!.mNodes, routeIndex = Route.instance.currentRoadIndex, status = "pending",
                         taxiRequest = true, driver = null, supersededRoute = null)
         if(serverCall != null){
             canSendPosition = false

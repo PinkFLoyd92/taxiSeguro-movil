@@ -16,7 +16,7 @@ private constructor() {
     var end : GeoPoint?= null
     var waypoints : ArrayList<GeoPoint>? = null
     var currentRoad: Road? = null
-    var roads: Array<out Road>? = null
+    var roads: ArrayList<out Road>? = null
     var currentRoadIndex = 0
 
     companion object {
