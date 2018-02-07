@@ -2,8 +2,6 @@ package com.example.geotaxi.geotaxi.API.endpoints
 
 import com.example.geotaxi.geotaxi.API.API
 import com.example.geotaxi.geotaxi.API.ServerAPI
-import com.example.geotaxi.geotaxi.data.Driver
-import com.example.geotaxi.geotaxi.data.User
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import org.osmdroid.bonuspack.routing.RoadNode
@@ -18,16 +16,16 @@ class RouteAPI {
     private val serverAPI = retrofit.create(ServerAPI::class.java)
 
     fun createRoute(location: GeoPoint, destination: GeoPoint, client: String,
-                    waypoints: ArrayList<RoadNode>, routeIndex: Int, status: String,
+                    points: ArrayList<RoadNode>?, routeIndex: Int, status: String,
                     taxiRequest: Boolean, driver: String?, supersededRoute: String?) : Call<JsonObject>? {
 
-        val jsonObject = roadToJson(location, destination, client, waypoints, routeIndex,
+        val jsonObject = roadToJson(location, destination, client, points, routeIndex,
                                     status, taxiRequest, driver, supersededRoute)
         return serverAPI?.createRoute(jsonObject)
     }
 
     private fun roadToJson(location: GeoPoint?, destination: GeoPoint?, client: String?,
-                           waypoints: ArrayList<RoadNode>?, routeIndex: Int?, status: String,
+                           points: ArrayList<RoadNode>?, routeIndex: Int?, status: String,
                            taxiRequest: Boolean, driver: String?, supersededRoute: String?): JsonObject {
         val json = JsonObject()
 
@@ -49,9 +47,9 @@ class RouteAPI {
             end.add("coordinates", coorEnd)
             json.add("end", end)
         }
-        if(waypoints!=null){
+        if(points!=null){
             val jsonPoints = JsonArray()
-            for(n in waypoints.iterator()){
+            for(n in points.iterator()){
                 val jsonArr = JsonArray()
                 jsonArr.add(n.mLocation.longitude)
                 jsonArr.add(n.mLocation.latitude)

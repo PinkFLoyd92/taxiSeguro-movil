@@ -24,6 +24,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import com.example.geotaxi.taxiseguroconductor.R
+import com.example.geotaxi.taxiseguroconductor.Road.RoadHandler
 import com.example.geotaxi.taxiseguroconductor.config.Env
 import com.example.geotaxi.taxiseguroconductor.config.GeoConstant
 import com.example.geotaxi.taxiseguroconductor.config.GeoConstant.Companion.MY_PERMISSIONS_REQUEST_LOCATION
@@ -60,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     var fabRoutes: FloatingActionButton? = null
     var requestRouteChange: Button? = null
     var progressBarConfirmation: CardView? = null
+    lateinit var roadHandler: RoadHandler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         mapHandler = MapHandler(this, mapView = map, clientMarker = clientMarker, driverMarker = driverMarker, destinationMarker = destMarker,
                                     mapController = mapController, mCurrentLocation = mCurrentLocation)
         sockethandler.initConfiguration(this, mapHandler as MapHandler)
-
+        roadHandler = RoadHandler()
         requestRouteChange?.setOnClickListener {
             selectingRouteCV.visibility = View.GONE
             fab.visibility = View.VISIBLE
@@ -345,14 +347,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun getAlternativeRoutes(selectingRouteCV: CardView, fabLocation: FloatingActionButton) {
         //search for alternatives routes
-        val result = mapHandler!!.getAlternativeRoutes(User.instance.position!!, mapHandler!!.destPosition!!)
-        if (result != null && result.size > 1) {
+        val roads = roadHandler.executeRoadTask(User.instance.position!!, mapHandler!!.destPosition!!)
+        if (roads != null && roads.size > 1) {
             fabLocation.visibility = View.GONE
             fabRoutes?.visibility = View.GONE
             selectingRouteCV.visibility = View.VISIBLE
-            mapHandler?.alternativeRoutes = result
+            mapHandler?.alternativeRoutes = roads
             mapHandler?.clearMapOverlays()
-            mapHandler?.drawRoads(result)
+            mapHandler?.drawRoads(roads)
             mapHandler?.updateClientIconOnMap(User.instance.position!!)
             mapHandler?.addDestMarker()
         } else {
