@@ -53,6 +53,7 @@ import com.google.gson.JsonObject
 import de.hdodenhof.circleimageview.CircleImageView
 import org.json.JSONObject
 import org.osmdroid.bonuspack.routing.Road
+import org.osmdroid.bonuspack.routing.RoadManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -274,10 +275,10 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
     }
 
     private fun allowRouteChange(routeIndex: Int, newRoads: ArrayList<out Road>) {
+        val points = RoadManager.buildRoadOverlay(newRoads[routeIndex]).points as ArrayList<GeoPoint>
         val serverCall = routeAPI.createRoute(
                             location = User.instance.position!!, destination = Route.instance.end!!, client = User.instance._id,
-                            points = newRoads[routeIndex].mNodes, routeIndex = routeIndex, status = "active",
-                            taxiRequest = false, driver = Driver.instance._id, supersededRoute = Route.instance._id)
+                            points = points, routeIndex = routeIndex, status = "active", taxiRequest = false, driver = Driver.instance._id, supersededRoute = Route.instance._id)
         if(serverCall != null){
             serverCall?.enqueue(object: Callback<JsonObject> {
                 override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
@@ -295,7 +296,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                             Route.instance.currentRoad = newRoads[routeIndex]
                             Route.instance.roads = newRoads
                             Route.instance.currentRoadIndex = routeIndex
-
+                            Route.instance.waypoints = points
                             mapHandler?.clearMapOverlays()
                             mapHandler?.drawRoad(newRoads[routeIndex], User.instance.position!!, Route.instance.end!!)
                         }
@@ -571,6 +572,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
             val roads = roadHandler.executeRoadTask(User.instance.position!!, Route.instance.end!!)
             if (roads != null && roads.isNotEmpty()
                     && roads[0].mStatus == Road.STATUS_OK) {
+                val points = RoadManager.buildRoadOverlay(roads[0]).points as ArrayList<GeoPoint>
+                Route.instance.waypoints = points
                 Route.instance.currentRoad = roads[0]
                 Route.instance.roads = roads
                 mapHandler?.drawRoad(roads[0], User.instance.position!!, Route.instance.end!!)
@@ -588,7 +591,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         val serverCall =
                 routeAPI.createRoute(
                         location = User.instance.position!!, destination = Route.instance.end!!, client = User.instance._id,
-                        points = Route.instance.currentRoad!!.mNodes, routeIndex = Route.instance.currentRoadIndex, status = "pending",
+                        points = Route.instance.waypoints, routeIndex = Route.instance.currentRoadIndex, status = "pending",
                         taxiRequest = true, driver = null, supersededRoute = null)
         if(serverCall != null){
             canSendPosition = false

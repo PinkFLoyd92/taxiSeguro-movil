@@ -16,7 +16,7 @@ class RouteAPI {
     private val serverAPI = retrofit.create(ServerAPI::class.java)
 
     fun createRoute(location: GeoPoint, destination: GeoPoint, client: String,
-                    points: ArrayList<RoadNode>?, routeIndex: Int, status: String,
+                    points: ArrayList<GeoPoint>?, routeIndex: Int, status: String,
                     taxiRequest: Boolean, driver: String?, supersededRoute: String?) : Call<JsonObject>? {
 
         val jsonObject = roadToJson(location, destination, client, points, routeIndex,
@@ -25,7 +25,7 @@ class RouteAPI {
     }
 
     private fun roadToJson(location: GeoPoint?, destination: GeoPoint?, client: String?,
-                           points: ArrayList<RoadNode>?, routeIndex: Int?, status: String,
+                           points: ArrayList<GeoPoint>?, routeIndex: Int?, status: String,
                            taxiRequest: Boolean, driver: String?, supersededRoute: String?): JsonObject {
         val json = JsonObject()
 
@@ -51,8 +51,8 @@ class RouteAPI {
             val jsonPoints = JsonArray()
             for(n in points.iterator()){
                 val jsonArr = JsonArray()
-                jsonArr.add(n.mLocation.longitude)
-                jsonArr.add(n.mLocation.latitude)
+                jsonArr.add(n.longitude)
+                jsonArr.add(n.latitude)
                 jsonPoints.add(jsonArr)
             }
             json.add("points", jsonPoints)

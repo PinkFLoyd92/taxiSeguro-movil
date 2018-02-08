@@ -91,9 +91,12 @@ class MapHandler {
                     val roads = activity!!.roadHandler.executeRoadTask(User.instance.position!!, endPos!!)
                     if (roads != null && roads.isNotEmpty()
                             && roads[0].mStatus == Road.STATUS_OK) {
+                        val points = RoadManager.buildRoadOverlay(roads[0]).points as ArrayList<GeoPoint>
+                        Route.instance.waypoints = points
                         Route.instance.currentRoad = roads[0]
                         Route.instance.roads = roads
-                        drawRoad(roads[0], User.instance.position!!, Route.instance.end!!)
+                        Route.instance.end = marker.position
+                        drawRoad(roads[0], User.instance.position!!, marker.position)
                         activity!!.fabRoutes?.visibility = View.VISIBLE
                         activity!!.taxi_request?.visibility = View.VISIBLE
                     }
@@ -111,9 +114,12 @@ class MapHandler {
                     val roads = activity!!.roadHandler.executeRoadTask(User.instance.position!!, p!!)
                     if (roads != null && roads.isNotEmpty()
                             && roads[0].mStatus == Road.STATUS_OK) {
+                        val points = RoadManager.buildRoadOverlay(roads[0]).points as ArrayList<GeoPoint>
+                        Route.instance.waypoints = points
                         Route.instance.currentRoad = roads[0]
                         Route.instance.roads = roads
-                        drawRoad(roads[0], User.instance.position!!, Route.instance.end!!)
+                        Route.instance.end = p
+                        drawRoad(roads[0], User.instance.position!!, p)
                         activity!!.fabRoutes?.visibility = View.VISIBLE
                         activity!!.taxi_request?.visibility = View.VISIBLE
                     }
