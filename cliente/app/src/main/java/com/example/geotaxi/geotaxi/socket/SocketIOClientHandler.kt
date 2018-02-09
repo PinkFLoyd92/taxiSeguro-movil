@@ -57,7 +57,7 @@ class SocketIOClientHandler(
                             val waitingDriver = activity.findViewById<CardView>(R.id.waiting_driver_cv)
                             waitingDriver.visibility = View.GONE
                             mapHandler?.animateToLocation(location = driverGeo, zoomLevel = 17)
-                            activity.showBottomSheetDialog(Driver.instance.name, Driver.instance.vehicle_plate)
+                            activity.showDriverInfoDialog(Driver.instance.name, Driver.instance.vehicle_plate)
                         }
                         isFirstDriverPosition = false
                     }
@@ -155,7 +155,6 @@ class SocketIOClientHandler(
                 activity.enablePanicButton()
             }
         }.on("ROUTE CHANGE - REQUEST") {args ->
-            Log.d("SOCKET", String.format("ROUTE CHANGE - REQUEST"))
             val obj = args[0] as JSONObject
             val routeIndex = obj.getInt("routeIndex")
             val longitude = obj.getJSONObject("start").getDouble("longitude")
@@ -164,7 +163,7 @@ class SocketIOClientHandler(
                 val roads = activity.roadHandler.executeRoadTask(GeoPoint(latitude, longitude), Route.instance.end!!)
                 if (roads != null && roads.isNotEmpty()) {
                     mapHandler.drawDriverRequestRoad(Route.instance.roads!![routeIndex])
-                    activity.showRouteSheetDialog(routeIndex, Route.instance.roads!!)
+                    activity.showRouteChangeDialog(routeIndex, Route.instance.roads!!)
                 }
             }
 

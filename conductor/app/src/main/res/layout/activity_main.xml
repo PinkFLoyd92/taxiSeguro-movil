@@ -15,96 +15,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-
-    <android.support.v7.widget.CardView
-        xmlns:card_view="http://schemas.android.com/apk/res-auto"
-        android:id="@+id/card_view_confirm_client"
-        android:layout_gravity="center"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="50dp"
-        android:layout_marginRight="50dp"
-        card_view:cardCornerRadius="4dp"
-        card_view:cardElevation="3dp"
-        android:visibility="gone">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:weightSum="100"
-            android:layout_margin="10dp">
-
-            <TextView
-                android:id="@+id/confim_client_title"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:text="Solicitud de Carrera"
-                android:layout_weight="80"
-                android:textAlignment="center"
-                android:layout_margin="10dp"
-                android:textColor="@color/colorAccent"
-                />
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                >
-                <TextView
-                    android:id="@+id/nombre_cliente"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Cliente: "
-                    android:layout_weight="80"
-                    android:textAlignment="textStart"
-                    />
-                <TextView
-                    android:id="@+id/input_nombre_cliente"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text=""
-                    android:layout_weight="80"
-                    android:textAlignment="textEnd"
-                    />
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    android:id="@+id/ubicacion_cliente"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Ubicacion de cliente: "
-                    android:layout_weight="80"
-                    android:textAlignment="textStart"
-                    />
-                <TextView
-                    android:id="@+id/input_ubicacion_cliente"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="80"
-                    android:textAlignment="textEnd"
-                    android:text=""
-                    android:textColor="@color/colorAccent"
-                    />
-            </LinearLayout>
-
-            <Button
-                android:id="@+id/ok"
-                style="@android:style/Widget.Material.Button.Borderless.Colored"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_columnSpan="2"
-                android:layout_gravity="center"
-                android:layout_margin="5dp"
-                android:layout_rowSpan="2"
-                android:onClick="acceptRoute"
-                android:text="OK"
-                android:textColor="@color/colorAccent" />
-
-        </LinearLayout>
-    </android.support.v7.widget.CardView>
     <android.support.v7.widget.CardView
         xmlns:card_view="http://schemas.android.com/apk/res-auto"
         android:id="@+id/waiting_confirmation"
@@ -237,6 +147,10 @@
 
     </LinearLayout>
 
+    <include layout="@layout/dialog_client_info"
+        android:layout_gravity="bottom"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"/>
 
 </FrameLayout>
     <android.support.design.widget.NavigationView

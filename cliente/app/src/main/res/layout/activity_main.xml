@@ -18,6 +18,7 @@
             android:layout_width="match_parent"
             android:layout_height="50dp"
             />
+
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -255,6 +256,16 @@
                 android:tint="@color/white"/>
 
         </LinearLayout>
+
+        <include layout="@layout/dialog_driver_info"
+            android:layout_gravity="bottom"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"/>
+        <include layout="@layout/route_change_dialog"
+            android:layout_gravity="bottom"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"/>
+
     </android.support.design.widget.CoordinatorLayout>
 
     <!-- Lef Menu -->

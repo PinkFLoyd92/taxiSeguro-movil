@@ -3,6 +3,7 @@ package com.example.geotaxi.geotaxi.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.pm.PackageManager
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
@@ -16,7 +17,6 @@ import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.content.Intent
 import android.content.IntentSender
-import android.support.design.widget.BottomSheetDialog
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.DialogFragment
 import android.support.v4.content.res.ResourcesCompat
@@ -29,6 +29,7 @@ import android.support.v7.widget.RecyclerView
 import android.support.v7.widget.Toolbar
 import android.view.*
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import com.example.geotaxi.geotaxi.API.endpoints.GeocoderNominatimAPI
 import com.example.geotaxi.geotaxi.API.endpoints.OSRMRoadAPI
@@ -75,10 +76,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
     var taxi_request: Button? = null
     var choose_route: Button? = null
     var fabRoutes: FloatingActionButton? = null
-    var bSheetDialog: BottomSheetDialog? = null
-    var routeSheetDialog: BottomSheetDialog? = null
-    var routeSheetView: View? = null
-    var sheetContentView: View? = null
+    lateinit var routeChangeDialog: View
+    lateinit var driverInfoDialog: View
     var sockethandler : SocketIOClientHandler? = null
     var mFusedLocationClient: FusedLocationProviderClient? = null
     var mLocationRequest: LocationRequest? = null
@@ -143,14 +142,12 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
             }
 
             User.instance.position = startGp
-            bSheetDialog = BottomSheetDialog(this)
-            sheetContentView = View.inflate(this, R.layout.sheet_dialog, null)
-            bSheetDialog?.setContentView(sheetContentView)
-            routeSheetDialog = BottomSheetDialog(this)
-            routeSheetDialog?.setCancelable(false)
-            routeSheetDialog?.setCanceledOnTouchOutside(false)
-            routeSheetView = View.inflate(this, R.layout.route_sheet_dialog, null)
-            routeSheetDialog?.setContentView(routeSheetView)
+            driverInfoDialog = findViewById(R.id.driver_info_dialog)
+            val driverOkBtn = driverInfoDialog.findViewById<Button>(R.id.driver_info_okBtn)
+            driverOkBtn.setOnClickListener{
+                driverInfoDialog.visibility = View.GONE
+            }
+            routeChangeDialog = findViewById(R.id.route_change_dialog)
             searchEV.setImeActionLabel("Buscar", KeyEvent.KEYCODE_ENTER)
             searchEV.setOnEditorActionListener(MyEditionActionListener())
             setOnTouchListener(search)
@@ -167,6 +164,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                 locationName = search.text.toString().trim()
                 if (locationName !== "")
                     fillAddressesRecyclerView()
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.hideSoftInputFromWindow(search.windowToken, 0)
             }
             mapHandler = MapHandler(this, mapView = map, userIcon = userIcon,
                     driverIcon = driverIcon, destinationIcon = destinationIcon )
@@ -247,21 +246,21 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
 
     }
 
-    fun showBottomSheetDialog(name: String, vehiclePlate: String ) {
-        val nameTv = sheetContentView!!.findViewById<TextView>(R.id.driver_name)
-        val vehiclePlateTv = sheetContentView!!.findViewById<TextView>(R.id.vehicle_plate)
+    fun showDriverInfoDialog(name: String, vehiclePlate: String ) {
+        val nameTv = driverInfoDialog.findViewById<TextView>(R.id.driver_name)
+        val vehiclePlateTv = driverInfoDialog.findViewById<TextView>(R.id.vehicle_plate)
         nameTv.text = name
         vehiclePlateTv.text = vehiclePlate
-        bSheetDialog?.show()
+        driverInfoDialog.visibility = View.VISIBLE
     }
 
-    fun showRouteSheetDialog(routeIndex: Int, newRoads: ArrayList<out Road>) {
-        val okRouteBtn = routeSheetView?.findViewById<Button>(R.id.route_ok)
-        val cancelRouteBtn = routeSheetView?.findViewById<Button>(R.id.route_cancel)
+    fun showRouteChangeDialog(routeIndex: Int, newRoads: ArrayList<out Road>) {
+        val okRouteBtn = routeChangeDialog.findViewById<Button>(R.id.route_ok)
+        val cancelRouteBtn = routeChangeDialog.findViewById<Button>(R.id.route_cancel)
         cancelRouteBtn?.setOnClickListener{
             mapHandler?.clearMapOverlays()
             mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
-            routeSheetDialog?.dismiss()
+            routeChangeDialog.visibility = View.GONE
             val route = JSONObject()
             route.put("routeId", Route.instance._id)
             route.put("driverId", Driver.instance._id)
@@ -269,9 +268,9 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         }
         okRouteBtn?.setOnClickListener{
             allowRouteChange(routeIndex, newRoads)
-            routeSheetDialog?.dismiss()
+            routeChangeDialog.visibility = View.GONE
         }
-        routeSheetDialog?.show()
+        routeChangeDialog.visibility = View.VISIBLE
     }
 
     private fun allowRouteChange(routeIndex: Int, newRoads: ArrayList<out Road>) {
@@ -283,14 +282,13 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
             serverCall?.enqueue(object: Callback<JsonObject> {
                 override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
                     Log.d("server response", "Failed")
-                    Toast.makeText(applicationContext, "fail to post on server", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(applicationContext, "Ocurrió un error", Toast.LENGTH_SHORT).show()
                 }
 
                 override fun onResponse(call: Call<JsonObject>?, response: Response<JsonObject>?) {
 
                     if (response?.code()!! in 200..209) {
                         val routeId = response.body()?.get("_id")?.asString
-                        Log.d("main activity", String.format("RouteId: %s", routeId))
                         if (routeId != null) {
                             Route.instance._id = routeId
                             Route.instance.currentRoad = newRoads[routeIndex]
@@ -533,6 +531,9 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                 val searchEV = v as EditText
                 locationName = searchEV.text.toString().trim()
                 if (locationName == "") return false
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                val searchET = findViewById<EditText>(R.id.search)
+                imm.hideSoftInputFromWindow(searchET.windowToken, 0)
                 fillAddressesRecyclerView()
                 return true
             }
@@ -642,6 +643,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         if (roadChosen != null) {
             Log.d("road", "Road chosen not null")
             Route.instance.currentRoad = roadChosen
+            val points = RoadManager.buildRoadOverlay(roadChosen).points as ArrayList<GeoPoint>
+            Route.instance.waypoints = points
         }
         Route.instance.currentRoadIndex = mapHandler?.getRoadIndexChosen()!!
         mapHandler?.clearMapOverlays()

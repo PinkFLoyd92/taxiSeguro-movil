@@ -131,6 +131,7 @@ class SocketIODriverHandler {
                     Route.instance.roads = mapHandler.alternativeRoutes
                     Toast.makeText(activity, "Solicitud de cambio aceptada", Toast.LENGTH_LONG).show()
                 } else {
+                    Toast.makeText(activity, "Solicitud de cambio negada", Toast.LENGTH_LONG).show()
                     mapHandler.clearMapOverlays()
                     mapHandler.drawRoad(Route.instance.currentRoad!!, User.instance.position!!)
 
