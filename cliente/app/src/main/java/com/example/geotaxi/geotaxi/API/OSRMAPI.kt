@@ -45,7 +45,9 @@ class OSRMAPI {
 }
 
 interface OsrmAPI {
-    @GET("route/v1/car/{fromLong},{fromLat};{toLong},{toLat}?alternatives=true&overview=full&geometries=polyline&steps=true&annotations=true")
+    @GET("route/v1/car/{fromLong},{fromLat};{toLong},{toLat}" +
+            "?alternatives=true&overview=full&geometries=polyline&" +
+            "steps=true&annotations=true")
     fun getOsrmRoutes(
             @Path("fromLong") fromLong: String,
             @Path("fromLat") fromLat: String,
