@@ -12,6 +12,7 @@ import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
@@ -251,27 +252,34 @@ class MapHandler {
         map?.overlays?.add(roadOverlays[Route.instance.currentRoadIndex])
     }
 
-    fun drawDriverRequestRoad(road: Road) {
-        if (!road.mNodes.isEmpty()) {
-            val roadOverlay = RoadManager.buildRoadOverlay(road)
-            val midIndex = if (road.mNodes.size%2 == 0) {
-                (road.mNodes.size/2) - 1
-            } else {
-                ((road.mNodes.size + 1)/2) - 1
-            }
-            val infoPos = road.mNodes[midIndex].mLocation
-            val duration = ("%.2f".format(road.mDuration/60)) + " min"
-            val distance = ("%.2f".format(road.mLength)) + " km"
+    fun drawRoadOverlay(roadOverlay: Polyline, duration: Double, driverRequest: Boolean = false) {
 
-            roadOverlay.infoWindow = MyInfoWindow(R.layout.info_window, map!!,
-                    title = duration, description = distance)
-            roadOverlay.color = ROAD_COLORS["alternative"]!!
-            map?.overlays?.add(roadOverlay)
-            roadOverlay.showInfoWindow(infoPos)
-            map?.zoomToBoundingBox(road.mBoundingBox, true)
-            map?.invalidate()
-            roadOverlays.add(roadOverlay)
+        roadOverlay.width = 6F
+        val midIndex = if (roadOverlay.points.size%2 == 0) {
+            (roadOverlay.points.size/2) - 1
+        } else {
+            ((roadOverlay.points.size + 1)/2) - 1
         }
+        val infoPos = roadOverlay.points[midIndex]
+        val durationStr = ("%.2f".format(duration/60)) + " min"
+        val mInfoWin = MyInfoWindow(R.layout.info_window, map!!,
+                title = durationStr, description = "")
+        if (driverRequest) {
+            mInfoWin.setTittle("Alterna")
+            mInfoWin.showTittle()
+            roadOverlay.color = ROAD_COLORS["alternative"]!!
+        } else {
+            roadOverlay.color = ROAD_COLORS["chosen"]!!
+        }
+        roadOverlay.infoWindow = mInfoWin
+        map?.overlays?.add(roadOverlay)
+        addDestMarker(Route.instance.end!!)
+        roadOverlay.showInfoWindow(infoPos)
+        val mBoundingBox = BoundingBox.fromGeoPoints(roadOverlay.points)
+        map?.zoomToBoundingBox(mBoundingBox, true)
+        map?.invalidate()
+        roadOverlays.add(roadOverlay)
+
     }
 
     private fun onRoadChosen(roadOverlay: Polyline, road: Road) {

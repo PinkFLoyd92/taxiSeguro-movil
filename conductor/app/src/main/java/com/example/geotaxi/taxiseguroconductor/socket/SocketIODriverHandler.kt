@@ -19,6 +19,7 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import java.util.concurrent.ExecutionException
 import org.json.JSONObject
+import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.util.GeoPoint
 
 
@@ -87,8 +88,10 @@ class SocketIODriverHandler {
                 Client.instance.position = clientGeo
                 val roads = activity.roadHandler.executeRoadTask(start, end) // creating the road.
                 if (roads != null) {
+                    val points = RoadManager.buildRoadOverlay(roads[Route.instance.currentRoadIndex]).points
                     Route.instance.currentRoad = roads[Route.instance.currentRoadIndex]
                     Route.instance.roads = roads
+                    Route.instance.waypoints = points as ArrayList<GeoPoint>
                     socket.emit("JOIN ROUTE", routeId)
                     activity.runOnUiThread {
                         mapHandler.drawRoad(roads[Route.instance.currentRoadIndex], Route.instance.start!!)
@@ -124,10 +127,12 @@ class SocketIODriverHandler {
                 val status = args[0] as String
                 if (status == "ok") {
                     val route = args[1] as JSONObject
-                    val roadIndexChosen = mapHandler?.getRoadIndexChosen()!!
+                    val roadIndexChosen = mapHandler.getRoadIndexChosen()
+                    val points = RoadManager.buildRoadOverlay(mapHandler.getRoadChosen()).points
                     Route.instance._id = route.getString("_id")
-                    Route.instance.currentRoad = mapHandler?.getRoadChosen()
+                    Route.instance.currentRoad = mapHandler.getRoadChosen()
                     Route.instance.currentRoadIndex = roadIndexChosen
+                    Route.instance.waypoints = points as ArrayList<GeoPoint>
                     Route.instance.roads = mapHandler.alternativeRoutes
                     Toast.makeText(activity, "Solicitud de cambio aceptada", Toast.LENGTH_LONG).show()
                 } else {

@@ -227,7 +227,9 @@ class MapHandler {
                 destPosition = GeoPoint(endLoc)
                 drawRoad(roads[Route.instance.currentRoadIndex], Route.instance.start!!)
                 activity?.fabRoutes?.visibility = View.VISIBLE
+                val points = RoadManager.buildRoadOverlay(roads[Route.instance.currentRoadIndex]).points
                 Route.instance.currentRoad = roads[Route.instance.currentRoadIndex]
+                Route.instance.waypoints = points as ArrayList<GeoPoint>
                 Route.instance.roads = roads
             }
         }catch (e : Exception) {

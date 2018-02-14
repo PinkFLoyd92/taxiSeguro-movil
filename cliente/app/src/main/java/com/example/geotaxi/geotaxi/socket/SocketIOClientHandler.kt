@@ -19,8 +19,10 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.Polyline
 import java.util.*
 import java.util.concurrent.ExecutionException
+import kotlin.collections.ArrayList
 
 /**
  * Created by dieropal on 17/01/18.
@@ -156,14 +158,23 @@ class SocketIOClientHandler(
             }
         }.on("ROUTE CHANGE - REQUEST") {args ->
             val obj = args[0] as JSONObject
+            val duration = obj.getDouble("duration")
             val routeIndex = obj.getInt("routeIndex")
-            val longitude = obj.getJSONObject("start").getDouble("longitude")
-            val latitude = obj.getJSONObject("start").getDouble("latitude")
+            val jArray = obj.getJSONArray("points")
+            val points = arrayListOf<GeoPoint>()
+            (0 until jArray.length())
+                    .map { jArray.getJSONObject(it) }
+                    .mapTo(points) {
+                        GeoPoint(it.get("latitude") as Double,
+                                it.get("longitude") as Double)
+                    }
             activity.runOnUiThread {
-                val roads = activity.roadHandler.executeRoadTask(GeoPoint(latitude, longitude), Route.instance.end!!)
-                if (roads != null && roads.isNotEmpty()) {
-                    mapHandler.drawDriverRequestRoad(Route.instance.roads!![routeIndex])
-                    activity.showRouteChangeDialog(routeIndex, Route.instance.roads!!)
+
+                if (points.isNotEmpty()) {
+                    val roadOverlay = Polyline()
+                    roadOverlay.points = points
+                    mapHandler.drawRoadOverlay(roadOverlay, duration, driverRequest = true)
+                    activity.showRouteChangeDialog(roadOverlay, duration, routeIndex)
                 }
             }
 

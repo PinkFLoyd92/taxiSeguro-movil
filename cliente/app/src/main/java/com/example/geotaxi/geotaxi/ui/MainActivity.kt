@@ -55,6 +55,7 @@ import de.hdodenhof.circleimageview.CircleImageView
 import org.json.JSONObject
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
+import org.osmdroid.views.overlay.Polyline
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -191,10 +192,10 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                 choose_route?.isEnabled = false
                 selectingRouteCV.visibility = View.GONE
                 setSearchLayoutVisibility(View.VISIBLE)
-       
                 mapHandler?.clearMapOverlays()
                 mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
             }
+
             fabRoutes?.setOnClickListener {
                 if (Route.instance.roads!!.size > 1) {
                     choose_route?.setTextColor(
@@ -254,7 +255,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         driverInfoDialog.visibility = View.VISIBLE
     }
 
-    fun showRouteChangeDialog(routeIndex: Int, newRoads: ArrayList<out Road>) {
+    fun showRouteChangeDialog(roadOverlay: Polyline, duration: Double, routeIndex: Int) {
         val okRouteBtn = routeChangeDialog.findViewById<Button>(R.id.route_ok)
         val cancelRouteBtn = routeChangeDialog.findViewById<Button>(R.id.route_cancel)
         cancelRouteBtn?.setOnClickListener{
@@ -267,14 +268,14 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
             sockethandler?.socket?.emit("ROUTE CHANGE - RESULT", "cancel", route)
         }
         okRouteBtn?.setOnClickListener{
-            allowRouteChange(routeIndex, newRoads)
+            allowRouteChange(roadOverlay, duration, routeIndex)
             routeChangeDialog.visibility = View.GONE
         }
         routeChangeDialog.visibility = View.VISIBLE
     }
 
-    private fun allowRouteChange(routeIndex: Int, newRoads: ArrayList<out Road>) {
-        val points = RoadManager.buildRoadOverlay(newRoads[routeIndex]).points as ArrayList<GeoPoint>
+    private fun allowRouteChange(roadOverlay: Polyline, duration: Double, routeIndex: Int) {
+        val points = roadOverlay.points as ArrayList<GeoPoint>
         val serverCall = routeAPI.createRoute(
                             location = User.instance.position!!, destination = Route.instance.end!!, client = User.instance._id,
                             points = points, routeIndex = routeIndex, status = "active", taxiRequest = false, driver = Driver.instance._id, supersededRoute = Route.instance._id)
@@ -291,12 +292,13 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                         val routeId = response.body()?.get("_id")?.asString
                         if (routeId != null) {
                             Route.instance._id = routeId
-                            Route.instance.currentRoad = newRoads[routeIndex]
-                            Route.instance.roads = newRoads
+                            /*Route.instance.currentRoad = newRoads[routeIndex]
+                            Route.instance.roads = newRoads*/
                             Route.instance.currentRoadIndex = routeIndex
                             Route.instance.waypoints = points
                             mapHandler?.clearMapOverlays()
-                            mapHandler?.drawRoad(newRoads[routeIndex], User.instance.position!!, Route.instance.end!!)
+                            mapHandler?.drawRoadOverlay(roadOverlay, duration)
+                            //mapHandler?.drawRoad(newRoads[routeIndex], User.instance.position!!, Route.instance.end!!)
                         }
                     }
                 }
