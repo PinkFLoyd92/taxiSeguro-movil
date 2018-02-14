@@ -37,8 +37,10 @@ import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.gson.JsonObject
 import kotlinx.android.synthetic.main.activity_main.*
+import org.json.JSONArray
 import org.json.JSONObject
 import org.osmdroid.api.IMapController
+import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -95,6 +97,10 @@ class MainActivity : AppCompatActivity() {
             selectingRouteCV.visibility = View.GONE
             fab.visibility = View.VISIBLE
             choose_route?.visibility = View.VISIBLE
+            choose_route?.setTextColor(
+                    ResourcesCompat.getColor(resources!!, R.color.gray, null)
+            )
+            choose_route?.isEnabled = false
             requestRouteChange?.visibility = View.GONE
             sendRouteChangeRequest()
         }
@@ -107,6 +113,9 @@ class MainActivity : AppCompatActivity() {
             fab.visibility = View.VISIBLE
             fabRoutes?.visibility = View.VISIBLE
             choose_route?.isEnabled = false
+            choose_route?.setTextColor(
+                    ResourcesCompat.getColor(resources!!, R.color.gray, null)
+            )
             choose_route?.visibility = View.VISIBLE
             requestRouteChange?.visibility = View.GONE
             selectingRouteCV.visibility = View.GONE
@@ -369,15 +378,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendRouteChangeRequest() {
-        val roadIndexChosen = mapHandler!!.getRoadIndexChosen()!!
-        val latitude = mapHandler!!.getRoadChosen()!!.mNodes.first().mLocation.latitude
-        val longitude = mapHandler!!.getRoadChosen()!!.mNodes.first().mLocation.longitude
+        val roadChosen = mapHandler!!.getRoadChosen()
+        val waypoints = RoadManager.buildRoadOverlay(roadChosen).points
+        val indexChosen = mapHandler!!.getRoadIndexChosen()
         val data = JSONObject()
-        val start = JSONObject()
-        start.put("latitude", latitude)
-        start.put("longitude", longitude)
-        data.put("start", start)
-        data.put("routeIndex", roadIndexChosen)
+        val points = JSONArray()
+        for (p in waypoints) {
+            val point = JSONObject()
+            point.put("longitude", p.longitude)
+            point.put("latitude", p.latitude)
+            points.put(point)
+        }
+        data.put("routeIndex", indexChosen)
+        data.put("duration", roadChosen?.mDuration)
+        data.put("points", points)
         data.put("clientId", Client.instance._id)
         sockethandler.socket.emit("ROUTE CHANGE - REQUEST", data)
         waiting_confirmation.visibility = View.VISIBLE

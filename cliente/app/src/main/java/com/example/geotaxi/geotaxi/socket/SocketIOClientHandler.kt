@@ -19,8 +19,10 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.Polyline
 import java.util.*
 import java.util.concurrent.ExecutionException
+import kotlin.collections.ArrayList
 
 /**
  * Created by dieropal on 17/01/18.
@@ -177,37 +179,45 @@ class SocketIOClientHandler(
                     val obj = args[0] as JSONObject
                     val routeStatus = obj.getString("routeStatus")
 
-                    Route.instance.status = routeStatus
-                    socket.emit("CHAT - GET MONITORS", null)
-                    activity.runOnUiThread {
-                        mapHandler.animateToLocation(location = User.instance.position, zoomLevel = 17)
-                        activity.enablePanicButton()
+            Route.instance.status = routeStatus
+            socket.emit("CHAT - GET MONITORS", null)
+            activity.runOnUiThread {
+                mapHandler.animateToLocation(location = User.instance.position, zoomLevel = 17)
+                activity.enablePanicButton()
+            }
+        }.on("ROUTE CHANGE - REQUEST") {args ->
+            val obj = args[0] as JSONObject
+            val duration = obj.getDouble("duration")
+            val routeIndex = obj.getInt("routeIndex")
+            val jArray = obj.getJSONArray("points")
+            val points = arrayListOf<GeoPoint>()
+            (0 until jArray.length())
+                    .map { jArray.getJSONObject(it) }
+                    .mapTo(points) {
+                        GeoPoint(it.get("latitude") as Double,
+                                it.get("longitude") as Double)
                     }
-                }.on("ROUTE CHANGE - REQUEST") {args ->
-                    val obj = args[0] as JSONObject
-                    val routeIndex = obj.getInt("routeIndex")
-                    val longitude = obj.getJSONObject("start").getDouble("longitude")
-                    val latitude = obj.getJSONObject("start").getDouble("latitude")
-                    activity.runOnUiThread {
-                        val roads = activity.roadHandler.executeRoadTask(GeoPoint(latitude, longitude), Route.instance.end!!)
-                        if (roads != null && roads.isNotEmpty()) {
-                            mapHandler.drawDriverRequestRoad(Route.instance.roads!![routeIndex])
-                            activity.showRouteChangeDialog(routeIndex, Route.instance.roads!!)
-                        }
-                    }
+            activity.runOnUiThread {
 
-                }.on("ROUTE - FINISH") {
-                    Log.d("OBJECT: ", "ROUTE HAS FINISHED")
-                    Route.instance.status = "inactive"
-                    Route.instance.currentRoad = null
-                    mapHandler.isChoosingDestination = true
-                    activity.runOnUiThread {
-                        mapHandler.resetMapOverlays()
-                        activity.setSearchLayoutVisibility(/*Visible default*/)
-                        Toast.makeText(activity, "La Ruta ha Finalizado", Toast.LENGTH_SHORT).show()
-                        mapHandler.updateUserIconOnMap(User.instance.position!!)
-                    }
+                if (points.isNotEmpty()) {
+                    val roadOverlay = Polyline()
+                    roadOverlay.points = points
+                    mapHandler.drawRoadOverlay(roadOverlay, duration, driverRequest = true)
+                    activity.showRouteChangeDialog(roadOverlay, duration, routeIndex)
                 }
+            }
+        }.on("ROUTE - FINISH") {
+            Log.d("OBJECT: ", "ROUTE HAS FINISHED")
+            Route.instance.status = "inactive"
+            Route.instance.currentRoad = null
+            mapHandler.isChoosingDestination = true
+            activity.runOnUiThread {
+                mapHandler.resetMapOverlays()
+                activity.setSearchLayoutVisibility(/*Visible default*/)
+                Toast.makeText(activity, "La Ruta ha Finalizado", Toast.LENGTH_SHORT).show()
+                mapHandler.updateUserIconOnMap(User.instance.position!!)
+            }
+        }        
         socket.connect()
     }
 

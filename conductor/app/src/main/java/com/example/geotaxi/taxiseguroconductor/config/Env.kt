@@ -27,7 +27,7 @@ class Env {
             }
             return "http://192.168.100.34"
         }
-        val OSRM_SERVER_URL = IP() + ":5000/route/v1/car/"
+        val OSRM_SERVER_URL = "172." + ":5000/route/v1/car/"
         val NOMINATIM_SERVER_URL = IP()  + ":80/nominatim/"
         val API_BASE_URL = IP()  + ":4000/v1/"
         val SOCKET_SERVER_URL = IP()  + ":9000/"
