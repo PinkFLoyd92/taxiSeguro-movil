@@ -125,7 +125,16 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
             val cancelRouteActionBtn = findViewById<Button>(R.id.cancel_route_action)
             val selectingRouteCV = findViewById<CardView>(R.id.selecting_route)
             val messageLauncher = findViewById<LinearLayout>(R.id.slider_messages)
-
+            val removeAddressInfo = findViewById<ImageButton>(R.id.remove_address_info)
+            val removeMarkerInfo = findViewById<ImageButton>(R.id.remove_destMarker_info)
+            removeAddressInfo.setOnClickListener {
+                findViewById<CardView>(R.id.search_address_info)
+                        .visibility = View.GONE
+            }
+            removeMarkerInfo.setOnClickListener {
+                findViewById<CardView>(R.id.dest_marker_info)
+                        .visibility = View.GONE
+            }
             chatController = ChatController(
                     chatScene = ChatView.ChatScene(activity = this,
                             chatList = this.chatList),
@@ -201,6 +210,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                     choose_route?.setTextColor(
                             ResourcesCompat.getColor(resources!!, R.color.dark_gray, null)
                     )
+                    choose_route?.isEnabled = false
                     mapHandler?.isChoosingDestination = false
                     fab.visibility = View.GONE
                     fabRoutes?.visibility = View.GONE
@@ -211,6 +221,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                     mapHandler?.drawRoads(Route.instance.roads!!)
                     taxi_request?.visibility = View.GONE
                     setSearchLayoutVisibility(View.GONE)
+                    findViewById<CardView>(R.id.dest_marker_info)
+                            .visibility = View.GONE
                 } else {
                     Toast.makeText(this, "No se encontraron rutas alternativas disponibles", Toast.LENGTH_LONG).show()
                 }
@@ -580,6 +592,10 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                 Route.instance.currentRoad = roads[0]
                 Route.instance.roads = roads
                 mapHandler?.drawRoad(roads[0], User.instance.position!!, Route.instance.end!!)
+                findViewById<CardView>(R.id.search_address_info)
+                        .visibility = View.GONE
+                findViewById<CardView>(R.id.dest_marker_info)
+                        .visibility = View.VISIBLE
                 fabRoutes?.visibility = View.VISIBLE
                 taxi_request?.visibility = View.VISIBLE
             }
@@ -617,6 +633,10 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                                 Route.instance.status = "active"
                                 Log.d("activity",String.format("id route response %s ", response.body().toString()))
                                 setSearchLayoutVisibility(View.GONE)
+                                findViewById<CardView>(R.id.search_address_info)
+                                        .visibility = View.GONE
+                                findViewById<CardView>(R.id.dest_marker_info)
+                                        .visibility = View.GONE
                                 taxi_request?.visibility = View.GONE
                                 fabRoutes?.visibility = View.GONE
                                 val fab = findViewById<FloatingActionButton>(R.id.fab_mlocation)

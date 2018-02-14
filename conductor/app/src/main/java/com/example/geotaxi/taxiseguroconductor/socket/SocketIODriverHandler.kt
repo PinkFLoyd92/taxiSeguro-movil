@@ -62,6 +62,7 @@ class SocketIODriverHandler {
                 try {
                     clientName = obj.getJSONObject("user").getString("name")
                     Client.instance._id = obj.getJSONObject("user").getString("_id")
+                    Client.instance.mobile = obj.getJSONObject("user").getString("mobile")
                 }catch(e: org.json.JSONException){
                     Log.d("error", e.message)
                     clientName = ""
@@ -97,7 +98,7 @@ class SocketIODriverHandler {
                         mapHandler.drawRoad(roads[Route.instance.currentRoadIndex], Route.instance.start!!)
                         activity.fabRoutes?.visibility = View.VISIBLE
                         activity.findViewById<TextView>(R.id.input_nombre_cliente).text = Client.instance.name
-                        activity.findViewById<TextView>(R.id.input_ubicacion_cliente).text = Client.instance.position?.toString()
+                        activity.findViewById<TextView>(R.id.input_mobile_cliente).text = Client.instance.mobile
                         activity.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.VISIBLE
                     }
                 }

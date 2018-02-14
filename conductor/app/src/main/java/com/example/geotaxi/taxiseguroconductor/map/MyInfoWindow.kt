@@ -28,6 +28,9 @@ class MyInfoWindow(layoutResId: Int, mapView: MapView,
         mView.findViewById<TextView>(R.id.route_tittle).text = tittle
     }
 
+    fun setTittleColor(color: Int){
+        mView.findViewById<TextView>(R.id.route_tittle).setTextColor(color)
+    }
     fun showTittle() {
         mView.findViewById<TextView>(R.id.route_tittle).visibility = View.VISIBLE
     }

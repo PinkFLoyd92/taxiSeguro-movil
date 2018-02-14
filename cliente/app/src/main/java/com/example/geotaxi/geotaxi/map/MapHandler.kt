@@ -2,6 +2,7 @@ package com.example.geotaxi.geotaxi.map
 
 import android.graphics.drawable.Drawable
 import android.support.v4.content.res.ResourcesCompat
+import android.support.v7.widget.CardView
 import android.view.View
 import com.example.geotaxi.geotaxi.R
 import com.example.geotaxi.geotaxi.data.Route
@@ -123,6 +124,10 @@ class MapHandler {
                         drawRoad(roads[0], User.instance.position!!, p)
                         activity!!.fabRoutes?.visibility = View.VISIBLE
                         activity!!.taxi_request?.visibility = View.VISIBLE
+                        activity!!.findViewById<CardView>(R.id.search_address_info)
+                                .visibility = View.GONE
+                        activity!!.findViewById<CardView>(R.id.dest_marker_info)
+                                .visibility = View.VISIBLE
                     }
                 }
                 return false

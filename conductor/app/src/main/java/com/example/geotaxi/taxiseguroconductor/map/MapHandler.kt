@@ -153,8 +153,11 @@ class MapHandler {
                     mInfoWin.showTittle()
                     map?.overlays?.add(roadOverlay)
                 } else {
-                    roadColor = ROAD_COLORS["best"]
-                    mInfoWin.hideTittle()
+                    roadColor = ROAD_COLORS["chosen"]
+                    mInfoWin.setTittle("Optima")
+                    mInfoWin.setTittleColor(ROAD_COLORS["chosen"]!!)
+                    mInfoWin.showTittle()
+                    //mInfoWin.hideTittle()
                 }
                 roadOverlay.infoWindow = mInfoWin
                 roadOverlay.infoWindow.view.setOnClickListener{ v: View  ->
@@ -184,6 +187,10 @@ class MapHandler {
     private fun onRoadChosen(roadOverlay: Polyline, road: Road) {
         var indx = 0
         activity?.choose_route?.isEnabled = true
+        activity?.choose_route?.setTextColor(
+                ResourcesCompat.getColor(activity?.resources!!, R.color.colorAccent, null)
+        )
+        activity?.choose_route?.isEnabled = true
         roadOverlays.forEach {
             if (it != roadOverlay) {
                 it.color = ROAD_COLORS["alternative"]!!
@@ -192,9 +199,9 @@ class MapHandler {
             }
             indx+= 1
         }
-        map!!.overlays.remove(roadOverlay)
         roadOverlay.color = ROAD_COLORS["chosen"]!!
         map!!.overlays.add(roadOverlay)
+        map!!.overlays.remove(roadOverlay)
         roadChosen = road
     }
 

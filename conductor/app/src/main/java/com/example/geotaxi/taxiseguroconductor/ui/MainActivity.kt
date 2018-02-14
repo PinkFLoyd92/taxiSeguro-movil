@@ -97,6 +97,10 @@ class MainActivity : AppCompatActivity() {
             selectingRouteCV.visibility = View.GONE
             fab.visibility = View.VISIBLE
             choose_route?.visibility = View.VISIBLE
+            choose_route?.setTextColor(
+                    ResourcesCompat.getColor(resources!!, R.color.gray, null)
+            )
+            choose_route?.isEnabled = false
             requestRouteChange?.visibility = View.GONE
             sendRouteChangeRequest()
         }
@@ -109,6 +113,9 @@ class MainActivity : AppCompatActivity() {
             fab.visibility = View.VISIBLE
             fabRoutes?.visibility = View.VISIBLE
             choose_route?.isEnabled = false
+            choose_route?.setTextColor(
+                    ResourcesCompat.getColor(resources!!, R.color.gray, null)
+            )
             choose_route?.visibility = View.VISIBLE
             requestRouteChange?.visibility = View.GONE
             selectingRouteCV.visibility = View.GONE

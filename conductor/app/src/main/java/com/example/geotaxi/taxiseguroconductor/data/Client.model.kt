@@ -11,6 +11,7 @@ private constructor() {
     var username = ""
     var name = ""
     var role = ""
+    var mobile = ""
     var position : GeoPoint? = null
 
     companion object {
