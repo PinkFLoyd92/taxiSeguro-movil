@@ -25,6 +25,7 @@ class MessageDialog: DialogFragment() {
         chat_ui = view.findViewById(R.id.chat_view)
         chat_ui.addMessages(chatController.getMessages())
         chat_ui.setOnSentMessageListener(ChatView.OnSentMessageListener {
+            chatController.addOwnMessage(it)
             chatController.sendMessage(it)
             true
         })

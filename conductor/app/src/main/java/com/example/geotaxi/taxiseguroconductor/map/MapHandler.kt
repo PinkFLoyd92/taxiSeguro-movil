@@ -231,7 +231,7 @@ class MapHandler {
                 Route.instance.roads = roads
             }
         }catch (e : Exception) {
-            Log.d("error", e.message)
+            e.printStackTrace()
         }
     }
 

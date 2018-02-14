@@ -158,8 +158,14 @@ class MainActivity : AppCompatActivity() {
 
             alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Aceptar") {
                 dialog, which -> run {
-                Toast.makeText(this, "Alerta enviada", Toast.LENGTH_SHORT).show()
-                //Do alert actions here
+                val data = JsonObject()
+                data.addProperty("route_id", Route.instance._id)
+                data.addProperty("role", "driver")
+                try {
+                    sockethandler.socket.emit("PANIC BUTTON", data)
+                } catch (e: Exception) {
+                    Log.d("activity",String.format("exception on emit alert: %s ", e.message))
+                }
             }
             }
             alertDialog.show()

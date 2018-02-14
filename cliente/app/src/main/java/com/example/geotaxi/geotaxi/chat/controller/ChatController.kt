@@ -10,7 +10,6 @@ import com.example.geotaxi.geotaxi.data.Chat
 import com.example.geotaxi.geotaxi.data.Route
 import com.example.geotaxi.geotaxi.socket.SocketIOClientHandler
 import com.example.geotaxi.geotaxi.ui.MainActivity
-import java.util.concurrent.ExecutionException
 
 /**
  * Created by sebas on 2/4/18.
@@ -63,7 +62,11 @@ class ChatController (val chatScene: ChatView.ChatScene,
         }
     }
     fun addMonitor(id_user: String, username: String, role: String) {
-        val chat: Chat = Chat(id_user = id_user,
+        val chatMapTmp: ChatMapped? = chatList.chats.find {
+            it.monitor_id == id_user
+        }
+        if(chatMapTmp != null) return
+        val chat = Chat(id_user = id_user,
                 id_route = Route.instance._id,
                 username = username,
                 role = role
@@ -76,7 +79,25 @@ class ChatController (val chatScene: ChatView.ChatScene,
         }
     }
 
+    fun removeMonitor(id_user: String) {
+        val chatMapTmp: ChatMapped? = chatList.chats.find {
+            it.monitor_id == id_user
+        }
+        if(chatMapTmp == null) return
+
+        chatList.chats.remove(chatMapTmp)
+        try {
+            chatScene.notifyChatSetChanged()
+        }catch (e: kotlin.UninitializedPropertyAccessException) {
+
+        }
+    }
+
     fun sendMessage(chatMessage: ChatMessage) {
         socketHandler.emitMessage(chatMessage)
+    }
+
+    fun addOwnMessage(chatMessage: ChatMessage) {
+        this.chatList.selectedChat.messages.add(chatMessage)
     }
 }

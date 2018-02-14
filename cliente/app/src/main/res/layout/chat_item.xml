@@ -12,6 +12,7 @@ android:orientation="vertical">
     android:paddingLeft="4dp"
     android:paddingRight="15dp"
     android:orientation="horizontal"
+    android:divider="@color/colorPrimaryDark"
     android:animateLayoutChanges="true">
     <TextView
         android:id="@+id/chat_item_monitor"
@@ -21,6 +22,19 @@ android:orientation="vertical">
         android:ellipsize="end"
         android:textSize="15sp"
         android:text="This text should be changed"
+        />
+
+    <TextView
+        android:id="@+id/chat_item_counter"
+        android:gravity="right"
+        android:layout_marginLeft="100dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:singleLine="true"
+        android:backgroundTint="@color/light_blue_900"
+        android:ellipsize="end"
+        android:textSize="20sp"
+        android:text="0"
         />
 </LinearLayout>
 </LinearLayout>

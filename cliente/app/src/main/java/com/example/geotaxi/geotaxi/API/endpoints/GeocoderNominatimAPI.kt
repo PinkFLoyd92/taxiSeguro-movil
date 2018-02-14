@@ -24,7 +24,7 @@ class GeocoderNominatimAPI {
         override fun doInBackground(vararg params: Context?): List<Address> {
             val geoNominatim = GeocoderNominatim(Locale.getDefault(), System.getProperty("http.agent"))
             //uncomment for use own server
-            geoNominatim.setService(Env.NOMINATIM_SERVER_URL)
+            // geoNominatim.setService(Env.NOMINATIM_SERVER_URL)
             var addresses = listOf<Address>()
             try {
                 addresses = geoNominatim.getFromLocationName(locationName,10, -1.97166,

@@ -510,6 +510,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
 
                 val data = JsonObject()
                 data.addProperty("route_id", Route.instance._id)
+                data.addProperty("role", "client")
                 try {
                     sockethandler!!.socket.emit("PANIC BUTTON", data)
                 } catch (e: Exception) {
@@ -543,7 +544,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
     }
 
     private fun fillAddressesRecyclerView() {
-        val addresses = geocoderApi!!.fromLocationName(locationName)
+        val addresses = geocoderApi.fromLocationName(locationName)
         if (addresses.isNotEmpty()) {
             Route.instance.end = GeoPoint(addresses.get(0).latitude, addresses.get(0).longitude)
             // specify an adapter
@@ -674,7 +675,6 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
     }
 
     private fun startChatDialog() {
-
         chatController.onStart()
     }
 }
