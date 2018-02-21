@@ -2,17 +2,21 @@ package com.example.geotaxi.geotaxi.Road
 
 import android.util.Log
 import com.example.geotaxi.geotaxi.API.endpoints.OSRMRoadAPI
+import com.example.geotaxi.geotaxi.data.Route
+import com.google.gson.JsonObject
 import org.json.JSONException
 import org.json.JSONObject
 import org.osmdroid.bonuspack.routing.*
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.bonuspack.utils.PolylineEncoder
 import org.osmdroid.util.GeoPoint
+import retrofit2.Call
 
 /**
  * Created by dieropal on 07/02/18.
  */
 class RoadHandler{
+
     private val osrmRoadAPI: OSRMRoadAPI = OSRMRoadAPI()
 
     fun executeRoadTask(waypoints: ArrayList<GeoPoint>): ArrayList<out Road>?{
@@ -94,4 +98,5 @@ class RoadHandler{
             return null
         }
     }
+
 }
