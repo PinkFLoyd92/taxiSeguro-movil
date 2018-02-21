@@ -6,6 +6,7 @@
     <color name="chosenRoute">#99383FFF</color>
     <color name="alternativeRoute">#99B71C1C</color>
     <color name="bestRoute">#99008000</color>
+    <color name="transparentGray_70">#B3808080</color>
     <color name="white">#ffffff</color>
     <color name="red_200">#EF9A9A</color>
     <color name="light_blue_900">#01579B</color>

@@ -15,8 +15,8 @@ import org.osmdroid.util.GeoPoint
 class RoadHandler{
     private val osrmRoadAPI: OSRMRoadAPI = OSRMRoadAPI()
 
-    fun executeRoadTask(startGp: GeoPoint, endGp: GeoPoint): ArrayList<out Road>?{
-        val response = osrmRoadAPI.getOsrmRoutes(startGp, endGp)
+    fun executeRoadTask(waypoints: ArrayList<GeoPoint>): ArrayList<out Road>?{
+        val response = osrmRoadAPI.getOsrmRoutes(waypoints)
         if (response!= null && response.isSuccessful) {
             return getRoads(response.body()!!)
 

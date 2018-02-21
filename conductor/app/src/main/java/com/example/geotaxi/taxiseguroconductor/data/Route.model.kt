@@ -18,6 +18,7 @@ private constructor() {
     var currentRoad: Road? = null
     var roads: ArrayList<out Road>? = null
     var currentRoadIndex = 0
+    var duration: Double = 0.0
 
     companion object {
         val instance = Route()

@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutionException
 import org.json.JSONObject
 import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.Polyline
 
 
 /**
@@ -50,7 +51,7 @@ class SocketIODriverHandler {
             val obj = args[0] as JSONObject // here we have the route Object
             mapHandler.initRouteAtLaunch(activity, obj)
         }.on("ROUTE REQUEST") { args ->
-            // Aqui llega la informacion de la ruta, el conductor siempre acepta la peticion.
+            // Aqui llega la informacion de la ruta
             try {
                 val obj = args[0] as JSONObject
                 val startLoc: Location = Location("")
@@ -80,6 +81,14 @@ class SocketIODriverHandler {
                 startLoc.longitude  = obj.getJSONObject("route").getJSONObject("start").getJSONArray("coordinates").get(0) as Double
                 endLoc.latitude  = obj.getJSONObject("route").getJSONObject("end").getJSONArray("coordinates").get(1) as Double
                 endLoc.longitude  = obj.getJSONObject("route").getJSONObject("end").getJSONArray("coordinates").get(0) as Double
+                val routeDuration = obj.getJSONObject("route").getDouble("duration")
+                val jpoints = obj.getJSONObject("route").getJSONObject("points").getJSONArray("coordinates")
+                val points = arrayListOf<GeoPoint>()
+                for (i in 0 until jpoints.length()) {
+                    val jpoint = jpoints.getJSONArray(i)
+                    val point = GeoPoint(jpoint.getDouble(1), jpoint.getDouble(0))
+                    points.add(point)
+                }
                 val start = GeoPoint(startLoc)
                 val end = GeoPoint(endLoc)
                 Route.instance.start = start
@@ -87,22 +96,18 @@ class SocketIODriverHandler {
                 mapHandler.destPosition = end
                 val clientGeo = GeoPoint(clientLoc)
                 Client.instance.position = clientGeo
-                val roads = activity.roadHandler.executeRoadTask(start, end) // creating the road.
-                if (roads != null) {
-                    val points = RoadManager.buildRoadOverlay(roads[Route.instance.currentRoadIndex]).points
-                    Route.instance.currentRoad = roads[Route.instance.currentRoadIndex]
-                    Route.instance.roads = roads
-                    Route.instance.waypoints = points as ArrayList<GeoPoint>
-                    socket.emit("JOIN ROUTE", routeId)
-                    activity.runOnUiThread {
-                        mapHandler.drawRoad(roads[Route.instance.currentRoadIndex], Route.instance.start!!)
-                        activity.fabRoutes?.visibility = View.VISIBLE
-                        activity.findViewById<TextView>(R.id.input_nombre_cliente).text = Client.instance.name
-                        activity.findViewById<TextView>(R.id.input_mobile_cliente).text = Client.instance.mobile
-                        activity.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.VISIBLE
-                    }
+                Route.instance.waypoints = points
+                Route.instance.duration = routeDuration
+                socket.emit("JOIN ROUTE", routeId)
+                activity.runOnUiThread {
+                    val roadOverlay = Polyline()
+                    roadOverlay.points = points
+                    mapHandler.drawRoadOverlay(roadOverlay, routeDuration)
+                    activity.fabRoutes?.visibility = View.VISIBLE
+                    activity.findViewById<TextView>(R.id.input_nombre_cliente).text = Client.instance.name
+                    activity.findViewById<TextView>(R.id.input_mobile_cliente).text = Client.instance.mobile
+                    activity.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.VISIBLE
                 }
-
             }catch (exception: ExecutionException){
                 Log.d("error" , args.toString())
             }
@@ -139,8 +144,13 @@ class SocketIODriverHandler {
                 } else {
                     Toast.makeText(activity, "Solicitud de cambio negada", Toast.LENGTH_LONG).show()
                     mapHandler.clearMapOverlays()
-                    mapHandler.drawRoad(Route.instance.currentRoad!!, User.instance.position!!)
-
+                    if (Route.instance.currentRoad != null) {
+                        mapHandler.drawRoad(Route.instance.currentRoad!!, User.instance.position!!)
+                    } else {
+                        val roadOverlay = Polyline()
+                        roadOverlay.points = Route.instance.waypoints
+                        mapHandler.drawRoadOverlay(roadOverlay, Route.instance.duration)
+                    }
                 }
             }
         }.on("ROUTE - FINISH") {

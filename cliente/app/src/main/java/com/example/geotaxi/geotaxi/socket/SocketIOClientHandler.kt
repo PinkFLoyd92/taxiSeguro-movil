@@ -1,6 +1,5 @@
 package com.example.geotaxi.geotaxi.socket
 
-import android.location.Location
 import android.support.v7.widget.CardView
 import android.util.Log
 import android.view.View
@@ -22,7 +21,6 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Polyline
 import java.util.*
 import java.util.concurrent.ExecutionException
-import kotlin.collections.ArrayList
 
 /**
  * Created by dieropal on 17/01/18.
@@ -210,9 +208,9 @@ class SocketIOClientHandler(
             Log.d("OBJECT: ", "ROUTE HAS FINISHED")
             Route.instance.status = "inactive"
             Route.instance.currentRoad = null
-            mapHandler.isChoosingDestination = true
+            mapHandler.onMapEventsOverlay = true
             activity.runOnUiThread {
-                mapHandler.resetMapOverlays()
+                mapHandler.resetToRoadMapOverlays()
                 activity.setSearchLayoutVisibility(/*Visible default*/)
                 Toast.makeText(activity, "La Ruta ha Finalizado", Toast.LENGTH_SHORT).show()
                 mapHandler.updateUserIconOnMap(User.instance.position!!)
@@ -240,7 +238,7 @@ class SocketIOClientHandler(
         socket.emit("CHAT - SEND FROM CLIENT", messageInfo)
     }
     fun initRouteAtLaunch(obj: JSONObject) {
-        val startLoc: Location? = Location("")
+        /*val startLoc: Location? = Location("")
         val endLoc: Location? = Location("")
         try {
             Log.d("OBJECT", obj.toString())
@@ -255,6 +253,7 @@ class SocketIOClientHandler(
             endLoc?.longitude = obj.getJSONObject("end").getJSONArray("coordinates").get(0) as Double
             endLoc?.latitude = obj.getJSONObject("end").getJSONArray("coordinates").get(1)  as Double
             Route.instance.end = GeoPoint(endLoc)
+            val waypoints = Route.instance.waypoints
             activity.runOnUiThread{
                 val roads = activity.roadHandler.executeRoadTask(endGp = Route.instance.end as GeoPoint, startGp = Route.instance.start as GeoPoint)
                 if (roads != null && roads.isNotEmpty()) {
@@ -264,6 +263,6 @@ class SocketIOClientHandler(
 
         }catch (e : Exception) {
             Log.d("error", e.message)
-        }
+        }*/
     }
 }

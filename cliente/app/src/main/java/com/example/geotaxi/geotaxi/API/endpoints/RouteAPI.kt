@@ -7,7 +7,6 @@ import com.google.gson.JsonObject
 import org.osmdroid.bonuspack.routing.RoadNode
 import org.osmdroid.util.GeoPoint
 import retrofit2.Call
-
 /**
  * Created by dieropal on 17/01/18.
  */
@@ -17,16 +16,19 @@ class RouteAPI {
 
     fun createRoute(location: GeoPoint, destination: GeoPoint, client: String,
                     points: ArrayList<GeoPoint>?, routeIndex: Int, status: String,
-                    taxiRequest: Boolean, driver: String?, supersededRoute: String?) : Call<JsonObject>? {
+                    taxiRequest: Boolean, driver: String?, supersededRoute: String?,
+                    waypoints: ArrayList<GeoPoint>?, duration: Double) : Call<JsonObject>? {
 
         val jsonObject = roadToJson(location, destination, client, points, routeIndex,
-                                    status, taxiRequest, driver, supersededRoute)
+                                    status, taxiRequest, driver, supersededRoute, waypoints,
+                                    duration)
         return serverAPI?.createRoute(jsonObject)
     }
 
     private fun roadToJson(location: GeoPoint?, destination: GeoPoint?, client: String?,
                            points: ArrayList<GeoPoint>?, routeIndex: Int?, status: String,
-                           taxiRequest: Boolean, driver: String?, supersededRoute: String?): JsonObject {
+                           taxiRequest: Boolean, driver: String?, supersededRoute: String?,
+                           waypoints: ArrayList<GeoPoint>?, duration: Double): JsonObject {
         val json = JsonObject()
 
         if (location != null) {
@@ -57,6 +59,16 @@ class RouteAPI {
             }
             json.add("points", jsonPoints)
         }
+        if(waypoints!=null){
+            val jsonWaypoints = JsonArray()
+            for(n in waypoints.iterator()){
+                val jsonArr = JsonArray()
+                jsonArr.add(n.longitude)
+                jsonArr.add(n.latitude)
+                jsonWaypoints.add(jsonArr)
+            }
+            json.add("waypoints", jsonWaypoints)
+        }
         if (client != null) {
             json.addProperty("client", client)
         }
@@ -80,6 +92,9 @@ class RouteAPI {
         if (taxiRequest != null) {
             json.addProperty("taxiRequest", taxiRequest)
         }
+
+        json.addProperty("duration", duration)
+
         return json
     }
 }

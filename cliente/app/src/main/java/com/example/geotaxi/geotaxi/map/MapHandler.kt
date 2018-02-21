@@ -1,9 +1,13 @@
 package com.example.geotaxi.geotaxi.map
 
+import android.graphics.PorterDuff
 import android.graphics.drawable.Drawable
 import android.support.v4.content.res.ResourcesCompat
 import android.support.v7.widget.CardView
+import android.util.Log
 import android.view.View
+import android.widget.Button
+import android.widget.Toast
 import com.example.geotaxi.geotaxi.R
 import com.example.geotaxi.geotaxi.data.Route
 import com.example.geotaxi.geotaxi.data.User
@@ -37,7 +41,11 @@ class MapHandler {
     private var roadChosen : Road? = null
     private var roadChosenIndex: Int = 0
     private var ROAD_COLORS: HashMap<String, Int> = hashMapOf()
-    var isChoosingDestination: Boolean = true
+    private var waypointMapMarkers: ArrayList<Marker> = arrayListOf()
+    var waypointIcon: Drawable
+    var destinationIcon: Drawable
+    var onMapEventsOverlay: Boolean = true
+    var overlaysEvents: MapEventsOverlay? = null
 
     constructor(activity: MainActivity,
                 mapView: MapView?,
@@ -66,20 +74,23 @@ class MapHandler {
         this.driverMarker = driverMarker
         this.userMarker = userMarker
         this.destinationMarker = destinationMarker
+        this.destinationIcon = destinationIcon!!
+        this.waypointIcon = destinationIcon.constantState.newDrawable().mutate()
+        this.waypointIcon.setColorFilter(ResourcesCompat.getColor(activity.resources, R.color.green, null),
+                PorterDuff.Mode.SRC_IN)
         this.ROAD_COLORS = hashMapOf(
                 "chosen" to ResourcesCompat.getColor(activity.resources, R.color.chosenRoute, null),
                 "alternative" to ResourcesCompat.getColor(activity.resources, R.color.alternativeRoute, null)
                 )
-
-        initMapEventsOverlay()
     }
 
-    private fun initMapEventsOverlay() {
+    fun initRoadMapEventsOverlay() {
         destinationMarker?.isDraggable = true
         destinationMarker?.dragOffset = 8F
         destinationMarker?.setOnMarkerDragListener(object: Marker.OnMarkerDragListener{
+            lateinit var startMarkerPosition: GeoPoint
             override fun onMarkerDragStart(marker: Marker?) {
-
+                startMarkerPosition = marker!!.position
             }
 
             override fun onMarkerDrag(marker: Marker?) {
@@ -87,41 +98,50 @@ class MapHandler {
             }
 
             override fun onMarkerDragEnd(marker: Marker?) {
-                if (isChoosingDestination) {
+                if (onMapEventsOverlay) {
                     val endPos = marker?.position
                     clearMapOverlays()
-                    val roads = activity!!.roadHandler.executeRoadTask(User.instance.position!!, endPos!!)
+                    val waypoints = arrayListOf<GeoPoint>(User.instance.position!!, endPos!!)
+                    val roads = activity!!.roadHandler.executeRoadTask(waypoints)
                     if (roads != null && roads.isNotEmpty()
                             && roads[0].mStatus == Road.STATUS_OK) {
                         val points = RoadManager.buildRoadOverlay(roads[0]).points as ArrayList<GeoPoint>
-                        Route.instance.waypoints = points
+                        Route.instance.roadPoints = points
                         Route.instance.currentRoad = roads[0]
                         Route.instance.roads = roads
                         Route.instance.end = marker.position
+                        Route.instance.waypoints = waypoints
                         drawRoad(roads[0], User.instance.position!!, marker.position)
+                        addDestMarker(marker.position)
                         activity!!.fabRoutes?.visibility = View.VISIBLE
                         activity!!.taxi_request?.visibility = View.VISIBLE
                     }
                 } else {
-                    marker?.position = Route.instance.end
+                    marker?.position = startMarkerPosition
                 }
             }
         })
 
         val mapEventsReceiver = object: MapEventsReceiver {
             override fun longPressHelper(p: GeoPoint?): Boolean {
-                if (isChoosingDestination) {
+                if (onMapEventsOverlay) {
                     clearMapOverlays()
                     map?.overlays?.add(destinationMarker)
-                    val roads = activity!!.roadHandler.executeRoadTask(User.instance.position!!, p!!)
+                    val waypoints = arrayListOf<GeoPoint>(User.instance.position!!, p!!)
+                    val roads = activity!!.roadHandler.executeRoadTask(waypoints)
                     if (roads != null && roads.isNotEmpty()
                             && roads[0].mStatus == Road.STATUS_OK) {
                         val points = RoadManager.buildRoadOverlay(roads[0]).points as ArrayList<GeoPoint>
-                        Route.instance.waypoints = points
+                        if (points == null) {
+                            Log.d("null", "POINTS NULL")
+                        }
+                        Route.instance.roadPoints = points
                         Route.instance.currentRoad = roads[0]
                         Route.instance.roads = roads
                         Route.instance.end = p
+                        Route.instance.waypoints = waypoints
                         drawRoad(roads[0], User.instance.position!!, p)
+                        addDestMarker(p)
                         activity!!.fabRoutes?.visibility = View.VISIBLE
                         activity!!.taxi_request?.visibility = View.VISIBLE
                         activity!!.findViewById<CardView>(R.id.search_address_info)
@@ -136,8 +156,167 @@ class MapHandler {
                 return false
             }
         }
-        val overlaysEvents = MapEventsOverlay(mapEventsReceiver)
+        overlaysEvents = MapEventsOverlay(mapEventsReceiver)
         map?.overlays?.add(overlaysEvents)
+    }
+
+    fun initCustomRoadMapEventsOverlay() {
+        val mapEventsReceiver = object: MapEventsReceiver {
+            override fun longPressHelper(p: GeoPoint?): Boolean {
+                if (onMapEventsOverlay) {
+                    val waypoint = Marker(map)
+                    waypoint.setIcon(destinationIcon)
+                    if (waypointMapMarkers.isNotEmpty()) {
+                        changePreviousIconsToWaypoint()
+                    }
+                    waypoint.position = p
+                    waypoint.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    waypoint.isDraggable = true
+                    waypoint.dragOffset = 5F
+                    waypoint.setOnMarkerDragListener(CustomRouteDragListener())
+                    waypointMapMarkers.add(waypoint)
+                    waypoint.infoWindow = object:InfoWindow(R.layout.transparent_view, map){
+                        override fun onOpen(item: Any?) {
+                        }
+
+                        override fun onClose() {
+                        }
+                    }
+                    Route.instance.waypoints.add(p!!)
+                    val roads = activity!!.roadHandler.executeRoadTask(Route.instance.waypoints)
+                    if (roads != null && roads.isNotEmpty()
+                            && roads[0].mStatus == Road.STATUS_OK) {
+                        val points = RoadManager.buildRoadOverlay(roads[0]).points as ArrayList<GeoPoint>
+                        Route.instance.roadPoints = points
+                        Route.instance.currentRoad = roads[0]
+                        Route.instance.roads = roads
+                        Route.instance.end = p
+                        clearMapOverlays()
+                        drawRoad(roads[0], User.instance.position!!, p)
+                        addwaypointMarkers()
+                        activity!!.findViewById<Button>(R.id.ok_customRoute_action)
+                                .isEnabled = true
+                        activity!!.findViewById<Button>(R.id.ok_customRoute_action)
+                                .setTextColor(ResourcesCompat.getColor(activity!!.resources, R.color.colorAccent, null))
+                    }
+                }
+                return false
+            }
+            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                return false
+            }
+        }
+        overlaysEvents = MapEventsOverlay(mapEventsReceiver)
+        map?.overlays?.add(overlaysEvents)
+    }
+
+    private fun changePreviousIconsToWaypoint() {
+        for (wm in waypointMapMarkers) {
+            wm.setIcon(waypointIcon)
+        }
+    }
+
+    private fun addwaypointMarkers() {
+        if (waypointMapMarkers.isNotEmpty()) {
+            for (wm in waypointMapMarkers) {
+                map?.overlays?.add(wm)
+            }
+        }
+    }
+
+    fun clearWaypointMarkers() {
+        waypointMapMarkers.clear()
+    }
+
+    private inner class CustomRouteDragListener : Marker.OnMarkerDragListener {
+        var draggedMarkerIndex = 0
+        var draggedMapMarkerIndex = 0
+        var removeArea = activity!!.findViewById<View>(R.id.fab_remove_area)
+        override fun onMarkerDragStart(marker: Marker?) {
+            if (onMapEventsOverlay) {
+                removeArea.visibility = View.VISIBLE
+                activity!!.findViewById<View>(R.id.fab_mlocation)
+                        .visibility = View.GONE
+                activity!!.findViewById<View>(R.id.customizing_route_actions)
+                        .visibility = View.GONE
+                marker?.setInfoWindowAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                marker?.showInfoWindow()
+                draggedMapMarkerIndex = waypointMapMarkers.indexOf(marker)
+                if (Route.instance.waypoints.size > 1) {
+                    draggedMarkerIndex = Route.instance.waypoints.indexOf(marker!!.position)
+                    Route.instance.waypoints.remove(marker!!.position)
+                }
+            }
+        }
+
+        override fun onMarkerDrag(marker: Marker?) {
+            if (onMapEventsOverlay) {
+                marker?.setInfoWindowAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                marker?.showInfoWindow()
+            }
+        }
+
+        override fun onMarkerDragEnd(marker: Marker?) {
+            if (onMapEventsOverlay) {
+                if (isInsideViewArea(marker!!.infoWindow.view, removeArea)){
+                    Toast.makeText(activity!!, "Inside", Toast.LENGTH_SHORT).show()
+                    clearMapOverlays()
+                    if (draggedMapMarkerIndex == waypointMapMarkers.size-1 &&
+                            draggedMapMarkerIndex > 0) {
+                     waypointMapMarkers[draggedMapMarkerIndex-1].setIcon(destinationIcon)
+                    }
+                    waypointMapMarkers.remove(marker)
+                    if (waypointMapMarkers.isEmpty()) {
+                        val okCustomRoute = activity!!.findViewById<Button>(R.id.ok_customRoute_action)
+                        okCustomRoute.isEnabled = false
+                        okCustomRoute.setTextColor(ResourcesCompat.getColor(activity!!.resources, R.color.gray, null))
+                    }
+                } else {
+                    Route.instance.waypoints.add(draggedMarkerIndex, marker.position!!)
+                }
+                if (waypointMapMarkers.isNotEmpty()) {
+                    val roads = activity!!.roadHandler.executeRoadTask(Route.instance.waypoints)
+                    if (roads != null && roads.isNotEmpty()
+                            && roads[0].mStatus == Road.STATUS_OK) {
+                        val points = RoadManager.buildRoadOverlay(roads[0]).points as ArrayList<GeoPoint>
+                        Route.instance.roadPoints = points
+                        Route.instance.currentRoad = roads[0]
+                        Route.instance.roads = roads
+                        clearMapOverlays()
+                        drawRoad(roads[0], User.instance.position!!, marker.position)
+                        addwaypointMarkers()
+                    }
+                }
+                removeArea.visibility = View.GONE
+                activity!!.findViewById<View>(R.id.fab_mlocation)
+                        .visibility = View.VISIBLE
+                activity!!.findViewById<View>(R.id.customizing_route_actions)
+                        .visibility = View.VISIBLE
+            } else {
+                marker?.position = Route.instance.end
+            }
+        }
+    }
+
+    fun isInsideViewArea(smallV: View, bigV: View): Boolean {
+        var sLocation = intArrayOf(0,0)
+        var bLocation = intArrayOf(0,0)
+        val sWidth = smallV.width
+        val sHeight = smallV.height
+        val bWidth = bigV.width
+        val bHeight = bigV.height
+
+        smallV.getLocationOnScreen(sLocation)
+        bigV.getLocationOnScreen(bLocation)
+
+        val sxCenter = sLocation[0] + sWidth/2
+        val syCenter = sLocation[1] + sHeight/2
+
+        if (sxCenter >= bLocation[0] && sxCenter <= (bLocation[0] + bWidth) &&
+            syCenter >= bLocation[1] && syCenter <= (bLocation[1] + bHeight)) {
+            return true
+        }
+        return false
     }
 
     fun updateUserIconOnMap(location: GeoPoint) {
@@ -162,6 +341,7 @@ class MapHandler {
             mapController?.zoomTo(17)
         }
     }
+
     fun drawRoad(road: Road, userPos: GeoPoint, destinationPos: GeoPoint) {
         if (roadOverlays.isNotEmpty()) {
             roadOverlays.clear()
@@ -189,7 +369,7 @@ class MapHandler {
                 true
             }
             updateUserIconOnMap(userPos)
-            addDestMarker(destinationPos)
+            //addDestMarker(destinationPos)
             map?.overlays?.add(roadOverlay)
             roadOverlay.showInfoWindow(infoPos)
             map?.zoomToBoundingBox(road.mBoundingBox, true)
@@ -320,10 +500,16 @@ class MapHandler {
         map?.overlays?.add(destinationMarker)
     }
 
-    fun resetMapOverlays() {
+    fun resetToRoadMapOverlays() {
         map?.overlays?.clear()
         InfoWindow.closeAllInfoWindowsOn(map)
-        initMapEventsOverlay()
+        initRoadMapEventsOverlay()
+    }
+
+    fun resetToCustomRoadMapOverlays() {
+        map?.overlays?.clear()
+        InfoWindow.closeAllInfoWindowsOn(map)
+        initCustomRoadMapEventsOverlay()
     }
 
     fun clearMapOverlays() {
@@ -332,6 +518,11 @@ class MapHandler {
         if (roadOverlays.isNotEmpty()) {
             roadOverlays.forEach { roadOverlay ->
                 removeMapOverlay(roadOverlay)
+            }
+        }
+        if (waypointMapMarkers.isNotEmpty()) {
+            for (wm in waypointMapMarkers) {
+                removeMapOverlay(wm)
             }
         }
         InfoWindow.closeAllInfoWindowsOn(map)

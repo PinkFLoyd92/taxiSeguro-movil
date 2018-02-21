@@ -46,6 +46,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 
 class MainActivity : AppCompatActivity() {
     var mCurrentLocation: GeoPoint? = GeoPoint(-2.1811931,-79.8765573)// Default Position
@@ -120,7 +121,13 @@ class MainActivity : AppCompatActivity() {
             requestRouteChange?.visibility = View.GONE
             selectingRouteCV.visibility = View.GONE
             mapHandler?.clearMapOverlays()
-            mapHandler?.drawRoad(Route.instance.currentRoad!!, Route.instance.start!!)
+            if (Route.instance.currentRoad != null) {
+                mapHandler?.drawRoad(Route.instance.currentRoad!!, Route.instance.start!!)
+            } else {
+                val roadOverlay = Polyline()
+                roadOverlay.points = Route.instance.waypoints
+                mapHandler!!.drawRoadOverlay(roadOverlay, Route.instance.duration)
+            }
         }
         fabRoutes?.setOnClickListener {
             fabRoutes?.visibility = View.GONE
@@ -252,7 +259,7 @@ class MainActivity : AppCompatActivity() {
         }else {
             Log.d("ERROR - LOCATION",String.format("locations: %s ", "" + location.toString()))
         }
-        if (Route.instance.currentRoad != null) {
+        if (Route.instance.end != null) {
             val data = JsonObject()
             val pos = JsonObject()
             pos.addProperty("longitude", this.mCurrentLocation?.longitude)

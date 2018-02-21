@@ -12,6 +12,7 @@ import org.json.JSONObject
 import org.osmdroid.api.IMapController
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
@@ -182,6 +183,30 @@ class MapHandler {
             roadIndex += 1
         }
         map?.overlays?.add(roadOverlays[0])
+    }
+
+    fun drawRoadOverlay(roadOverlay: Polyline, duration: Double) {
+
+        roadOverlay.width = 6F
+        val midIndex = if (roadOverlay.points.size%2 == 0) {
+            (roadOverlay.points.size/2) - 1
+        } else {
+            ((roadOverlay.points.size + 1)/2) - 1
+        }
+        val infoPos = roadOverlay.points[midIndex]
+        val durationStr = ("%.2f".format(duration/60)) + " min"
+        val mInfoWin = MyInfoWindow(R.layout.info_window, map!!,
+                title = durationStr, description = "")
+        roadOverlay.color = ROAD_COLORS["chosen"]!!
+        roadOverlay.infoWindow = mInfoWin
+        map?.overlays?.add(roadOverlay)
+        addDestMarker()
+        roadOverlay.showInfoWindow(infoPos)
+        val mBoundingBox = BoundingBox.fromGeoPoints(roadOverlay.points)
+        map?.zoomToBoundingBox(mBoundingBox, true)
+        map?.invalidate()
+        roadOverlays.add(roadOverlay)
+
     }
 
     private fun onRoadChosen(roadOverlay: Polyline, road: Road) {
