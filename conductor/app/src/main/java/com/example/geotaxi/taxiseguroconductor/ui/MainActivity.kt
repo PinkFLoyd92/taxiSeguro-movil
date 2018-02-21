@@ -130,7 +130,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
         fabRoutes?.setOnClickListener {
-            fabRoutes?.visibility = View.GONE
             getAlternativeRoutes(selectingRouteCV, fab)
         }
         fab.setOnClickListener {

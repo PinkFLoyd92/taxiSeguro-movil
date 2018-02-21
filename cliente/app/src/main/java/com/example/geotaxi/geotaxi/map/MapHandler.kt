@@ -259,7 +259,6 @@ class MapHandler {
         override fun onMarkerDragEnd(marker: Marker?) {
             if (onMapEventsOverlay) {
                 if (isInsideViewArea(marker!!.infoWindow.view, removeArea)){
-                    Toast.makeText(activity!!, "Inside", Toast.LENGTH_SHORT).show()
                     clearMapOverlays()
                     if (draggedMapMarkerIndex == waypointMapMarkers.size-1 &&
                             draggedMapMarkerIndex > 0) {
@@ -270,6 +269,8 @@ class MapHandler {
                         val okCustomRoute = activity!!.findViewById<Button>(R.id.ok_customRoute_action)
                         okCustomRoute.isEnabled = false
                         okCustomRoute.setTextColor(ResourcesCompat.getColor(activity!!.resources, R.color.gray, null))
+                    } else {
+                        Route.instance.end = waypointMapMarkers.last().position
                     }
                 } else {
                     Route.instance.waypoints.add(draggedMarkerIndex, marker.position!!)
@@ -282,6 +283,9 @@ class MapHandler {
                         Route.instance.roadPoints = points
                         Route.instance.currentRoad = roads[0]
                         Route.instance.roads = roads
+                        if (draggedMapMarkerIndex == waypointMapMarkers.size-1) {
+                            Route.instance.end = marker.position
+                        }
                         clearMapOverlays()
                         drawRoad(roads[0], User.instance.position!!, marker.position)
                         addwaypointMarkers()
