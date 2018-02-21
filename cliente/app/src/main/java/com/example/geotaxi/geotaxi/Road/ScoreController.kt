@@ -19,19 +19,19 @@ import java.util.*
 
 class ScoreController(val activity: AppCompatActivity): ScoreChecker{
     override fun getScore(route: Route, getScoreAPICall: (points: ArrayList<GeoPoint>) -> Call<JsonObject>?){
-        val points = route.waypoints!!
+        val points = route.roadPoints!!
         val serverCall = getScoreAPICall(points)
         if(serverCall != null){
             serverCall.enqueue(object: Callback<JsonObject> {
                 override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
-                    Log.d("server response", "Failed")
+                    Log.d("server response", "Failed on score")
                 }
                 override fun onResponse(call: Call<JsonObject>?, response: Response<JsonObject>?) {
 
                     if (response?.code()!! in 200..209) {
                         try {
                             val score = response.body()?.get("score")?.asInt
-                            TODO("received score from server")
+                            Log.d("Score", String.format("Score: %s", score))
                         } catch (exception: Exception){
                             Log.d("EXCEPTION", exception.message)
                         }

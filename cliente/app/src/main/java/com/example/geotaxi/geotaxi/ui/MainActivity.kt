@@ -659,6 +659,11 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener, RatingD
 
 
     private fun requestTaxi() {
+        val getScore = {
+            points: ArrayList<GeoPoint> ->
+            routeAPI.getScore(points)
+        }
+        scoreController.getScore(Route.instance, getScore)
         val waitingDriver = findViewById<CardView>(R.id.waiting_driver_cv)
         waitingDriver.visibility = View.VISIBLE
         val serverCall =
@@ -758,6 +763,6 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener, RatingD
     }
 
     override fun onPositiveButtonClicked(rate: Int, comment: String) {
-        scoreController.setScoreAndEmit(Route.instance._id, rate, sockethandler.emitScore)
+        scoreController.setScoreAndEmit(Route.instance._id, rate, sockethandler!!.emitScore)
     }
 }

@@ -77,7 +77,7 @@ interface ServerAPI {
             @Path("number") number: String): Call<JsonObject>
 
     @Headers( "Content-Type: application/json" )
-    @POST("routes/getScore")
+    @POST("routes/routeScore")
     fun getScore(
             @Body body: JsonObject
     ): Call<JsonObject>
