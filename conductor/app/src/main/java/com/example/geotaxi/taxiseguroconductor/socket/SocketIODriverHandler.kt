@@ -6,6 +6,8 @@ import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
+import co.intentservice.chatui.models.ChatMessage
+import com.example.geotaxi.geotaxi.chat.ChatMapped
 import com.example.geotaxi.taxiseguroconductor.R
 import com.example.geotaxi.taxiseguroconductor.config.Env
 import com.example.geotaxi.taxiseguroconductor.data.Client
@@ -22,13 +24,15 @@ import org.json.JSONObject
 import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Polyline
+import java.util.*
 
 
 /**
  * Created by sebas on 1/11/18.
  * Class used to handle all the logic that is handled by the websockets.
  */
-class SocketIODriverHandler {
+class SocketIODriverHandler (
+        private val activity: MainActivity){
     public val socket = IO.socket(Env.SOCKET_SERVER_URL)
 
     /* Configuration for the driver
@@ -43,6 +47,7 @@ class SocketIODriverHandler {
             userInfo.addProperty("_id", id_user)
             userInfo.addProperty("role", role)
             socket.emit("SENDINFO", userInfo)
+            socket.emit("CHAT - GET MONITORS", null)
             socket.emit("DRIVER - IS IN ROUTE?", userInfo)
         } .on("DRIVER - IS IN ROUTE") { args ->
             /*
@@ -126,6 +131,51 @@ class SocketIODriverHandler {
                     Log.d("error" , args.toString())
                 }
             }
+                }.on("ROUTE - CHAT") { args ->
+                    if (args[0] == null)
+                        return@on
+                    val obj = args[0] as JSONObject
+                    val route_id =  obj.getString("route_id")
+                    val role =  obj.getString("role")
+                    val message_text = obj.getJSONObject("message")
+                    val from :String = message_text.getString("from")
+                    val text :String = message_text.getString("text")
+                    val date: Date = Date(message_text.getLong("date"))
+
+                    val chatMessage = ChatMessage(text,
+                            message_text.getLong("date"), ChatMessage.Type.RECEIVED)
+                    val chatMapped:ChatMapped? = activity.chatController.chatList.chats.find {
+                        it.monitor_id == from
+                    }
+                    if(chatMapped != null) {
+                        activity.chatController.chatList.selectedChat = chatMapped
+                        chatMapped.messages.add(chatMessage)
+                        activity.chatController.tryToAddMessage(chatMessage)
+
+                    }
+                    else {
+                        Log.d("ROUTECHAT", "No existe ese monitor")
+                    }
+
+                } .on("CHAT - MONITORS") { args ->
+            if (args[0] == null)
+                return@on
+            val obj = args[0] as JSONObject
+            Log.d("obj", obj.toString())
+            val id = obj.getString("_id")
+            val username =  obj.getString("username")
+            val role =  obj.getString("role")
+
+            /*if(Route.instance.status == "active" && !activity.chatController
+                            .isMonitorAlreadyCreated(id)) {*/
+
+            Log.d("information", obj.toString())
+            activity.runOnUiThread {
+                activity.chatController
+                        .addMonitor(id_user = id,
+                                username = username,
+                                role =  role)
+            }
         }.on("ROUTE CHANGE - RESULT") { args ->
             activity.runOnUiThread {
                 activity.progressBarConfirmation?.visibility = View.GONE
@@ -162,5 +212,25 @@ class SocketIODriverHandler {
             }
         }
         socket.connect()
+    }
+
+    fun emitMessage(chatMessage: ChatMessage) {
+        val chatMapped: ChatMapped = activity.chatController.chatList.selectedChat
+
+        val messageInfo = JsonObject()
+        val message = JsonObject()
+        messageInfo.addProperty("route_id", Route.instance._id)
+        messageInfo.addProperty("role", User.instance.role)
+
+        message.addProperty("from", User.instance._id)
+        message.addProperty("position", "left")
+        message.addProperty("type", "text")
+        message.addProperty("value", chatMessage.message)
+        message.addProperty("text", chatMessage.message)
+        message.addProperty("date", chatMessage.timestamp)
+        message.addProperty("to", chatMapped.monitor_id)
+        messageInfo.add("message", message)
+
+        socket.emit("CHAT - SEND FROM USER", messageInfo)
     }
 }

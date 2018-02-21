@@ -233,9 +233,10 @@ class SocketIOClientHandler(
         message.addProperty("value", chatMessage.message)
         message.addProperty("text", chatMessage.message)
         message.addProperty("date", chatMessage.timestamp)
+        message.addProperty("to", chatMapped.monitor_id)
         messageInfo.add("message", message)
 
-        socket.emit("CHAT - SEND FROM CLIENT", messageInfo)
+        socket.emit("CHAT - SEND FROM USER", messageInfo)
     }
     fun initRouteAtLaunch(obj: JSONObject) {
         /*val startLoc: Location? = Location("")
