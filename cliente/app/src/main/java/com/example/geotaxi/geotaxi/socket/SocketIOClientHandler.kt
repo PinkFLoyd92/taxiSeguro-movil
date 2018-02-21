@@ -208,9 +208,9 @@ class SocketIOClientHandler(
                     Log.d("OBJECT: ", "ROUTE HAS FINISHED")
                     Route.instance.status = "inactive"
                     Route.instance.currentRoad = null
-                    mapHandler.isChoosingDestination = true
+                    mapHandler.onMapEventsOverlay = true
                     activity.runOnUiThread {
-                        mapHandler.resetMapOverlays()
+                        mapHandler.resetToRoadMapOverlays()
                         activity.setSearchLayoutVisibility(/*Visible default*/)
                         Toast.makeText(activity, "La Ruta ha Finalizado", Toast.LENGTH_SHORT).show()
                         mapHandler.updateUserIconOnMap(User.instance.position!!)
