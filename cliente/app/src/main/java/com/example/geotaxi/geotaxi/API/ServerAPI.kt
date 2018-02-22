@@ -75,4 +75,10 @@ interface ServerAPI {
             @Path("toLong") toLong: String,
             @Path("toLat") toLat: String,
             @Path("number") number: String): Call<JsonObject>
+
+    @Headers( "Content-Type: application/json" )
+    @POST("routes/routeScore")
+    fun getScore(
+            @Body body: JsonObject
+    ): Call<JsonObject>
 }

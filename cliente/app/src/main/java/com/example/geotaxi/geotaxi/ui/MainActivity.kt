@@ -36,6 +36,7 @@ import com.example.geotaxi.geotaxi.API.endpoints.OSRMRoadAPI
 import com.example.geotaxi.geotaxi.API.endpoints.RouteAPI
 import com.example.geotaxi.geotaxi.R
 import com.example.geotaxi.geotaxi.Road.RoadHandler
+import com.example.geotaxi.geotaxi.Road.ScoreController
 import com.example.geotaxi.geotaxi.chat.controller.ChatController
 import com.example.geotaxi.geotaxi.chat.model.ChatList
 import com.example.geotaxi.geotaxi.chat.view.ChatDialog
@@ -51,6 +52,7 @@ import com.example.geotaxi.geotaxi.utils.Utility
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.gson.JsonObject
+import com.stepstone.apprating.listener.RatingDialogListener
 import de.hdodenhof.circleimageview.CircleImageView
 import org.json.JSONObject
 import org.osmdroid.bonuspack.routing.Road
@@ -62,9 +64,10 @@ import retrofit2.Response
 import uk.co.chrisjenx.calligraphy.CalligraphyConfig
 
 
-class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
+class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener, RatingDialogListener{
 
     lateinit var chatController : ChatController
+    lateinit var scoreController: ScoreController
     private var chatList: ChatList = ChatList()
     var geocoderApi: GeocoderNominatimAPI = GeocoderNominatimAPI()
     var roadApi: OSRMRoadAPI? = null
@@ -168,10 +171,12 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                             chatList = this.chatList),
                     activity = this,
                     chatList = this.chatList )
+            scoreController = ScoreController(activity = this)
             messageLauncher.setOnClickListener {
                 this.startChatDialog()
             }
 
+            // scoreController.showDialog()
 
             setSupportActionBar(toolbar)
             navButton = findViewById(R.id.nav_button)
@@ -250,7 +255,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                 selectingRouteCV.visibility = View.GONE
                 setSearchLayoutVisibility(View.VISIBLE)
                 mapHandler?.clearMapOverlays()
-                mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
+                val score = getScore(Route.instance.roadPoints!!)
+                mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!, score)
                 mapHandler?.addDestMarker(Route.instance.end!!)
             }
 
@@ -319,7 +325,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         val cancelRouteBtn = routeChangeDialog.findViewById<Button>(R.id.route_cancel)
         cancelRouteBtn?.setOnClickListener{
             mapHandler?.clearMapOverlays()
-            mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
+            val score = getScore(Route.instance.roadPoints!!)
+            mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!, score)
             mapHandler?.addDestMarker(Route.instance.end!!)
             routeChangeDialog.visibility = View.GONE
             val route = JSONObject()
@@ -341,7 +348,7 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                             points = points, routeIndex = routeIndex, status = "active", taxiRequest = false, driver = Driver.instance._id,
                             supersededRoute = Route.instance._id, waypoints = null, duration = duration)
         if(serverCall != null){
-            serverCall?.enqueue(object: Callback<JsonObject> {
+            serverCall.enqueue(object: Callback<JsonObject> {
                 override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
                     Log.d("server response", "Failed")
                     Toast.makeText(applicationContext, "Ocurrió un error", Toast.LENGTH_SHORT).show()
@@ -643,7 +650,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
                 Route.instance.currentRoad = roads[0]
                 Route.instance.roads = roads
                 Route.instance.waypoints = waypoints
-                mapHandler?.drawRoad(roads[0], User.instance.position!!, Route.instance.end!!)
+                val score = getScore(points)
+                mapHandler?.drawRoad(roads[0], User.instance.position!!, Route.instance.end!!, score)
                 mapHandler?.addDestMarker(Route.instance.end!!)
                 fabRoutes?.visibility = View.VISIBLE
                 taxi_request?.visibility = View.VISIBLE
@@ -716,8 +724,17 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
         }
         Route.instance.currentRoadIndex = mapHandler?.getRoadIndexChosen()!!
         mapHandler?.clearMapOverlays()
-        mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
+        val score = getScore(Route.instance.roadPoints!!)
+        mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!, score)
         mapHandler?.addDestMarker(Route.instance.end!!)
+    }
+
+    fun getScore(routePoints: ArrayList<GeoPoint>): Int?{
+        val getScore = {
+            points: ArrayList<GeoPoint> ->
+            routeAPI.getScore(points)
+        }
+        return scoreController.getScore(routePoints, getScore)
     }
 
     fun setSearchLayoutVisibility(visibility: Int = View.VISIBLE) {
@@ -744,5 +761,15 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
 
     private fun startChatDialog() {
         chatController.onStart()
+    }
+
+    override fun onNegativeButtonClicked() {
+    }
+
+    override fun onNeutralButtonClicked() {
+    }
+
+    override fun onPositiveButtonClicked(rate: Int, comment: String) {
+        scoreController.setScoreAndEmit(Route.instance._id, rate, sockethandler!!.emitScore)
     }
 }

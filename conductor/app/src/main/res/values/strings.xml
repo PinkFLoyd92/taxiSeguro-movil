@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Conductor</string>
+    <string name="message">Mensajes</string>
+    <string name="titulo_taxiseguro">Taxi Seguro</string>
 </resources>

@@ -13,16 +13,25 @@ import android.os.Bundle
 import android.preference.PreferenceManager
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.ActivityCompat
+import android.support.v4.app.DialogFragment
 import android.support.v4.content.ContextCompat
 import android.support.v4.content.res.ResourcesCompat
+import android.support.v4.view.GravityCompat
+import android.support.v4.widget.DrawerLayout
 import android.support.v7.app.AlertDialog
 import android.support.v7.widget.CardView
 import android.util.Log
+import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.Toast
+import com.example.geotaxi.geotaxi.chat.controller.ChatController
+import com.example.geotaxi.geotaxi.chat.model.ChatList
+import com.example.geotaxi.geotaxi.chat.view.ChatDialog
+import com.example.geotaxi.geotaxi.chat.view.ChatView
 import com.example.geotaxi.taxiseguroconductor.R
 import com.example.geotaxi.taxiseguroconductor.Road.RoadHandler
 import com.example.geotaxi.taxiseguroconductor.config.Env
@@ -48,11 +57,21 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener{
+    override fun onDialogPositiveClick(dialog: DialogFragment) {
+        dialog.dismiss()
+    }
+
+    override fun onDialogNegativeClick(dialog: DialogFragment) {
+        dialog.dismiss()
+    }
+
+    lateinit var chatController : ChatController
     var mCurrentLocation: GeoPoint? = GeoPoint(-2.1811931,-79.8765573)// Default Position
     var map: MapView? = null
+    private var chatList: ChatList = ChatList()
     var mapHandler: MapHandler? = null
-    var sockethandler = SocketIODriverHandler()
+    var sockethandler = SocketIODriverHandler(this)
     var mFusedLocationClient : FusedLocationProviderClient? = null
     var mLocationRequest : LocationRequest? = null
     var mLocationCallback : LocationCallback? = null
@@ -65,6 +84,7 @@ class MainActivity : AppCompatActivity() {
     var requestRouteChange: Button? = null
     var progressBarConfirmation: CardView? = null
     lateinit var roadHandler: RoadHandler
+    lateinit var drawerLayout: DrawerLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,6 +110,7 @@ class MainActivity : AppCompatActivity() {
         driverMarker?.setIcon(driverIcon)
         clientMarker = Marker(this.map)
         clientMarker?.setIcon(userIcon)
+        drawerLayout = findViewById(R.id.drawer_layout)
         mapHandler = MapHandler(this, mapView = map, clientMarker = clientMarker, driverMarker = driverMarker, destinationMarker = destMarker,
                                     mapController = mapController, mCurrentLocation = mCurrentLocation)
         sockethandler.initConfiguration(this, mapHandler as MapHandler)
@@ -154,6 +175,17 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             initLocationrequest()
+        }
+
+        val messageLauncher = findViewById<LinearLayout>(R.id.slider_messages)
+        chatController = ChatController(
+                chatScene = ChatView.ChatScene(activity = this,
+                        chatList = this.chatList),
+                activity = this,
+                chatList = this.chatList )
+        chatController.socketHandler = sockethandler
+        messageLauncher.setOnClickListener {
+            this.startChatDialog()
         }
     }
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -409,5 +441,18 @@ class MainActivity : AppCompatActivity() {
         this.findViewById<CardView>(R.id.card_view_confirm_client).visibility = View.GONE
     }
 
+
+    override fun onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)){
+            drawerLayout.closeDrawer(Gravity.LEFT)
+        }
+        else if (drawerLayout.isDrawerOpen(GravityCompat.END)){
+            drawerLayout.closeDrawer(Gravity.RIGHT)
+        }
+    }
+
+    private fun startChatDialog() {
+        chatController.onStart()
+    }
 }
 

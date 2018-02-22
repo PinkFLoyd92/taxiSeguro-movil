@@ -177,45 +177,48 @@ class SocketIOClientHandler(
                     val obj = args[0] as JSONObject
                     val routeStatus = obj.getString("routeStatus")
 
-            Route.instance.status = routeStatus
-            socket.emit("CHAT - GET MONITORS", null)
-            activity.runOnUiThread {
-                mapHandler.animateToLocation(location = User.instance.position, zoomLevel = 17)
-                activity.enablePanicButton()
-            }
-        }.on("ROUTE CHANGE - REQUEST") {args ->
-            val obj = args[0] as JSONObject
-            val duration = obj.getDouble("duration")
-            val routeIndex = obj.getInt("routeIndex")
-            val jArray = obj.getJSONArray("points")
-            val points = arrayListOf<GeoPoint>()
-            (0 until jArray.length())
-                    .map { jArray.getJSONObject(it) }
-                    .mapTo(points) {
-                        GeoPoint(it.get("latitude") as Double,
-                                it.get("longitude") as Double)
+                    Route.instance.status = routeStatus
+                    socket.emit("CHAT - GET MONITORS", null)
+                    activity.runOnUiThread {
+                        mapHandler.animateToLocation(location = User.instance.position, zoomLevel = 17)
+                        activity.enablePanicButton()
                     }
-            activity.runOnUiThread {
+                }.on("ROUTE CHANGE - REQUEST") {args ->
+                    val obj = args[0] as JSONObject
+                    val duration = obj.getDouble("duration")
+                    val routeIndex = obj.getInt("routeIndex")
+                    val jArray = obj.getJSONArray("points")
+                    val points = arrayListOf<GeoPoint>()
+                    (0 until jArray.length())
+                            .map { jArray.getJSONObject(it) }
+                            .mapTo(points) {
+                                GeoPoint(it.get("latitude") as Double,
+                                        it.get("longitude") as Double)
+                            }
+                    activity.runOnUiThread {
 
-                if (points.isNotEmpty()) {
-                    val roadOverlay = Polyline()
-                    roadOverlay.points = points
-                    mapHandler.drawRoadOverlay(roadOverlay, duration, driverRequest = true)
-                    activity.showRouteChangeDialog(roadOverlay, duration, routeIndex)
+                        if (points.isNotEmpty()) {
+                            val roadOverlay = Polyline()
+                            roadOverlay.points = points
+                            mapHandler.drawRoadOverlay(roadOverlay, duration, driverRequest = true)
+                            activity.showRouteChangeDialog(roadOverlay, duration, routeIndex)
+                        }
+                    }
+                }.on("ROUTE - FINISH") {
+                    Log.d("OBJECT: ", "ROUTE HAS FINISHED")
+                    Route.instance.status = "inactive"
+                    Route.instance.currentRoad = null
+                    mapHandler.onMapEventsOverlay = true
+                    activity.runOnUiThread {
+                        mapHandler.resetToRoadMapOverlays()
+                        activity.setSearchLayoutVisibility(/*Visible default*/)
+                        Toast.makeText(activity, "La Ruta ha Finalizado", Toast.LENGTH_SHORT).show()
+                        mapHandler.updateUserIconOnMap(User.instance.position!!)
+                    }
+
+                    // ask the score to user and emit the score
+                    activity.scoreController.showDialog()
                 }
-            }
-        }.on("ROUTE - FINISH") {
-            Log.d("OBJECT: ", "ROUTE HAS FINISHED")
-            Route.instance.status = "inactive"
-            Route.instance.currentRoad = null
-            mapHandler.onMapEventsOverlay = true
-            activity.runOnUiThread {
-                mapHandler.resetToRoadMapOverlays()
-                activity.setSearchLayoutVisibility(/*Visible default*/)
-                Toast.makeText(activity, "La Ruta ha Finalizado", Toast.LENGTH_SHORT).show()
-                mapHandler.updateUserIconOnMap(User.instance.position!!)
-            }
-        }        
         socket.connect()
     }
 
@@ -233,9 +236,10 @@ class SocketIOClientHandler(
         message.addProperty("value", chatMessage.message)
         message.addProperty("text", chatMessage.message)
         message.addProperty("date", chatMessage.timestamp)
+        message.addProperty("to", chatMapped.monitor_id)
         messageInfo.add("message", message)
 
-        socket.emit("CHAT - SEND FROM CLIENT", messageInfo)
+        socket.emit("CHAT - SEND FROM USER", messageInfo)
     }
     fun initRouteAtLaunch(obj: JSONObject) {
         /*val startLoc: Location? = Location("")
@@ -264,5 +268,18 @@ class SocketIOClientHandler(
         }catch (e : Exception) {
             Log.d("error", e.message)
         }*/
+    }
+
+    fun emitScore(routeId: String, score: Number) {
+        val info = JsonObject()
+        info.addProperty("route_id", routeId)
+        info.addProperty("score", score)
+        socket.emit("SCORE - EMITTED", info)
+    }
+
+    val emitScore = {
+        routeId: String, score: Number
+        ->
+        emitScore(routeId, score)
     }
 }

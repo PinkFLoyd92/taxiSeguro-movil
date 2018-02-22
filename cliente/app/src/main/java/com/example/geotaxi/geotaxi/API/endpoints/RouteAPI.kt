@@ -43,8 +43,8 @@ class RouteAPI {
         if (destination != null) {
             val end = JsonObject()
             val coorEnd = JsonArray()
-            coorEnd.add(destination?.longitude)
-            coorEnd.add(destination?.latitude)
+            coorEnd.add(destination.longitude)
+            coorEnd.add(destination.latitude)
             end.addProperty("type", "Point")
             end.add("coordinates", coorEnd)
             json.add("end", end)
@@ -96,5 +96,18 @@ class RouteAPI {
         json.addProperty("duration", duration)
 
         return json
+    }
+
+    fun getScore( points: ArrayList<GeoPoint>) : Call<JsonObject>? {
+        val json = JsonObject()
+            val jsonPoints = JsonArray()
+            for(n in points.iterator()){
+                val jsonArr = JsonArray()
+                jsonArr.add(n.longitude)
+                jsonArr.add(n.latitude)
+                jsonPoints.add(jsonArr)
+            }
+            json.add("points", jsonPoints)
+        return serverAPI?.getScore(json)
     }
 }
