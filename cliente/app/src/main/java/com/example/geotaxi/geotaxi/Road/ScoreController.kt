@@ -1,5 +1,7 @@
 package com.example.geotaxi.geotaxi.Road
 
+import android.content.Context
+import android.os.AsyncTask
 import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
@@ -12,36 +14,27 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * Created by sebas on 2/21/18.
  */
 
 class ScoreController(val activity: AppCompatActivity): ScoreChecker{
-    override fun getScore(route: Route, getScoreAPICall: (points: ArrayList<GeoPoint>) -> Call<JsonObject>?){
-        val points = route.roadPoints!!
-        val serverCall = getScoreAPICall(points)
-        if(serverCall != null){
-            serverCall.enqueue(object: Callback<JsonObject> {
-                override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
-                    Log.d("server response", "Failed on score")
-                }
-                override fun onResponse(call: Call<JsonObject>?, response: Response<JsonObject>?) {
-
-                    if (response?.code()!! in 200..209) {
-                        try {
-                            val score = response.body()?.get("score")?.asInt
-                            Log.d("Score", String.format("Score: %s", score))
-                        } catch (exception: Exception){
-                            Log.d("EXCEPTION", exception.message)
-                        }
-                    }
-                }
-
-            })
-        } else {
-            Log.d("RETROFIT", "ServerCAll is null")
+    override fun getScore(routePoints: ArrayList<GeoPoint>, getScoreAPICall: (points: ArrayList<GeoPoint>) -> Call<JsonObject>?) : Int?{
+        val serverCall = getScoreAPICall(routePoints)
+        val scoreTask = getScoreTask(serverCall)
+        val response = scoreTask.execute().get() ?: return null
+        if (response.code() in 200..209) {
+            try {
+                val score = response.body()?.get("score")?.asInt
+                Log.d("Score", String.format("Score: %s", score))
+                return score
+            } catch (exception: Exception){
+                Log.d("EXCEPTION", exception.message)
+            }
         }
+        return null
     }
 
     override fun setScoreAndEmit(routeId: String,
@@ -64,6 +57,16 @@ class ScoreController(val activity: AppCompatActivity): ScoreChecker{
                     .setCommentBackgroundColor(R.color.colorPrimaryDark)
                     .create(activity)
                     .show()
+        }
+    }
+
+    inner class getScoreTask(val serverCall: Call<JsonObject>?) : AsyncTask<Context, Void, Response<JsonObject>?>() {
+
+        override fun doInBackground(vararg params: Context?): Response<JsonObject>? {
+            if (serverCall != null ) {
+                return serverCall.execute()
+            }
+            return null
         }
     }
 }

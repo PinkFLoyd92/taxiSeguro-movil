@@ -46,6 +46,13 @@ class MapHandler {
     var destinationIcon: Drawable
     var onMapEventsOverlay: Boolean = true
     var overlaysEvents: MapEventsOverlay? = null
+    var scores :HashMap<Int, String> = hashMapOf(
+            0 to "Muy Peligrosa",
+            1 to "Peligrosa",
+            2 to "Ok",
+            3 to "Segura",
+            4 to "Muy Segura"
+    )
 
     constructor(activity: MainActivity,
                 mapView: MapView?,
@@ -111,7 +118,8 @@ class MapHandler {
                         Route.instance.roads = roads
                         Route.instance.end = marker.position
                         Route.instance.waypoints = waypoints
-                        drawRoad(roads[0], User.instance.position!!, marker.position)
+                        val score = activity!!.getScore(points)
+                        drawRoad(roads[0], User.instance.position!!, marker.position, score)
                         addDestMarker(marker.position)
                         activity!!.fabRoutes?.visibility = View.VISIBLE
                         activity!!.taxi_request?.visibility = View.VISIBLE
@@ -140,7 +148,8 @@ class MapHandler {
                         Route.instance.roads = roads
                         Route.instance.end = p
                         Route.instance.waypoints = waypoints
-                        drawRoad(roads[0], User.instance.position!!, p)
+                        val score = activity!!.getScore(points)
+                        drawRoad(roads[0], User.instance.position!!, p, score)
                         addDestMarker(p)
                         activity!!.fabRoutes?.visibility = View.VISIBLE
                         activity!!.taxi_request?.visibility = View.VISIBLE
@@ -192,7 +201,8 @@ class MapHandler {
                         Route.instance.roads = roads
                         Route.instance.end = p
                         clearMapOverlays()
-                        drawRoad(roads[0], User.instance.position!!, p)
+                        val score = activity!!.getScore(points)
+                        drawRoad(roads[0], User.instance.position!!, p, score)
                         addwaypointMarkers()
                         activity!!.findViewById<Button>(R.id.ok_customRoute_action)
                                 .isEnabled = true
@@ -283,7 +293,8 @@ class MapHandler {
                         Route.instance.currentRoad = roads[0]
                         Route.instance.roads = roads
                         clearMapOverlays()
-                        drawRoad(roads[0], User.instance.position!!, marker.position)
+                        val score = activity!!.getScore(points)
+                        drawRoad(roads[0], User.instance.position!!, marker.position, score)
                         addwaypointMarkers()
                     }
                 }
@@ -342,7 +353,7 @@ class MapHandler {
         }
     }
 
-    fun drawRoad(road: Road, userPos: GeoPoint, destinationPos: GeoPoint) {
+    fun drawRoad(road: Road, userPos: GeoPoint, destinationPos: GeoPoint, score: Int?) {
         if (roadOverlays.isNotEmpty()) {
             roadOverlays.clear()
         }
@@ -355,9 +366,11 @@ class MapHandler {
                 ((road.mNodes.size + 1)/2) - 1
             }
             val infoPos = road.mNodes[midIndex].mLocation
-            val duration = ("%.2f".format(road.mDuration/60)) + " min"
+            var duration = ("%.2f".format(road.mDuration/60)) + " min"
             val distance = ("%.2f".format(road.mLength)) + " km"
-
+            if (score != null) {
+                duration+= "\n"+ scores[score]
+            }
             roadOverlay.infoWindow = MyInfoWindow(R.layout.info_window, map!!,
                     title = duration, description = distance)
             roadOverlay.infoWindow.view.setOnLongClickListener { v: View ->
@@ -397,9 +410,13 @@ class MapHandler {
                     ((road.mNodes.size + 1)/2) - 1
                 }
                 val infoPos = road.mNodes[midIndex].mLocation
-                val duration = ("%.2f".format(road.mDuration/60)) + " min"
+                var duration = ("%.2f".format(road.mDuration/60)) + " min"
                 val distance = ("%.2f".format(road.mLength)) + " km"
 
+                val score = activity!!.getScore(roadOverlay.points as ArrayList<GeoPoint>)
+                if (score != null) {
+                    duration+= "\n"+ scores[score]
+                }
                 val mInfoWin = MyInfoWindow(R.layout.info_window, map!!,
                         title = duration, description = distance)
 
@@ -446,7 +463,11 @@ class MapHandler {
             ((roadOverlay.points.size + 1)/2) - 1
         }
         val infoPos = roadOverlay.points[midIndex]
-        val durationStr = ("%.2f".format(duration/60)) + " min"
+        var durationStr = ("%.2f".format(duration/60)) + " min"
+        val score = activity!!.getScore(roadOverlay.points as ArrayList<GeoPoint>)
+        if (score != null) {
+            durationStr+= "\n"+ scores[score]
+        }
         val mInfoWin = MyInfoWindow(R.layout.info_window, map!!,
                 title = durationStr, description = "")
         if (driverRequest) {

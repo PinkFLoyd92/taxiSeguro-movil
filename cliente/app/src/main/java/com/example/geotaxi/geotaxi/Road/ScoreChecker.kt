@@ -10,6 +10,6 @@ import retrofit2.Call
  */
 
 interface ScoreChecker {
-    fun getScore(route: Route, getScoreAPICall: (points: ArrayList<GeoPoint>) -> Call<JsonObject>?)
+    fun getScore(routePoints: ArrayList<GeoPoint>, getScoreAPICall: (points: ArrayList<GeoPoint>) -> Call<JsonObject>?): Int?
     fun setScoreAndEmit(routeId: String, score: Number, emitScore: (routeId: String, score: Number) -> Unit)
 }

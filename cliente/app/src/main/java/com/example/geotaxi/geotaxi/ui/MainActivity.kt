@@ -255,7 +255,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener, RatingD
                 selectingRouteCV.visibility = View.GONE
                 setSearchLayoutVisibility(View.VISIBLE)
                 mapHandler?.clearMapOverlays()
-                mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
+                val score = getScore(Route.instance.roadPoints!!)
+                mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!, score)
                 mapHandler?.addDestMarker(Route.instance.end!!)
             }
 
@@ -324,7 +325,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener, RatingD
         val cancelRouteBtn = routeChangeDialog.findViewById<Button>(R.id.route_cancel)
         cancelRouteBtn?.setOnClickListener{
             mapHandler?.clearMapOverlays()
-            mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
+            val score = getScore(Route.instance.roadPoints!!)
+            mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!, score)
             mapHandler?.addDestMarker(Route.instance.end!!)
             routeChangeDialog.visibility = View.GONE
             val route = JSONObject()
@@ -648,7 +650,8 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener, RatingD
                 Route.instance.currentRoad = roads[0]
                 Route.instance.roads = roads
                 Route.instance.waypoints = waypoints
-                mapHandler?.drawRoad(roads[0], User.instance.position!!, Route.instance.end!!)
+                val score = getScore(points)
+                mapHandler?.drawRoad(roads[0], User.instance.position!!, Route.instance.end!!, score)
                 mapHandler?.addDestMarker(Route.instance.end!!)
                 fabRoutes?.visibility = View.VISIBLE
                 taxi_request?.visibility = View.VISIBLE
@@ -659,11 +662,6 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener, RatingD
 
 
     private fun requestTaxi() {
-        val getScore = {
-            points: ArrayList<GeoPoint> ->
-            routeAPI.getScore(points)
-        }
-        scoreController.getScore(Route.instance, getScore)
         val waitingDriver = findViewById<CardView>(R.id.waiting_driver_cv)
         waitingDriver.visibility = View.VISIBLE
         val serverCall =
@@ -726,8 +724,17 @@ class MainActivity : AppCompatActivity(), ChatDialog.ChatDialogListener, RatingD
         }
         Route.instance.currentRoadIndex = mapHandler?.getRoadIndexChosen()!!
         mapHandler?.clearMapOverlays()
-        mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!)
+        val score = getScore(Route.instance.roadPoints!!)
+        mapHandler?.drawRoad(Route.instance.currentRoad!!, User.instance.position!!, Route.instance.end!!, score)
         mapHandler?.addDestMarker(Route.instance.end!!)
+    }
+
+    fun getScore(routePoints: ArrayList<GeoPoint>): Int?{
+        val getScore = {
+            points: ArrayList<GeoPoint> ->
+            routeAPI.getScore(points)
+        }
+        return scoreController.getScore(routePoints, getScore)
     }
 
     fun setSearchLayoutVisibility(visibility: Int = View.VISIBLE) {
