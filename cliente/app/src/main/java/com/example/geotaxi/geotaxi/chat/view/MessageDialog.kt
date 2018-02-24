@@ -29,8 +29,9 @@ class MessageDialog: DialogFragment() {
             chatController.sendMessage(it)
             true
         })
+        dialog.window.setLayout(300, 1000)
         return view
-    }
+   }
     fun renderMessage(chatMessage: ChatMessage){
         chatController.activity.runOnUiThread {
             chat_ui.addMessage(chatMessage)

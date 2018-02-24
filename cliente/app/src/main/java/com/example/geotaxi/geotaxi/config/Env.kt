@@ -19,7 +19,7 @@ class Env {
                     ||  buildDetails.contains("test-keys")) {
                 return "http://10.0.3.2"
             }
-            return "http://192.168.0.111"
+            return "http://192.168.100.34"
         }
         val OSRM_SERVER_URL = IP() + ":5000/route/v1/car/"
         val NOMINATIM_SERVER_URL = IP() + ":80/nominatim/"

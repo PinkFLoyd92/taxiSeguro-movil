@@ -47,6 +47,7 @@ class MapHandler {
     var onMapEventsOverlay: Boolean = true
     var overlaysEvents: MapEventsOverlay? = null
     var scores :HashMap<Int, String> = hashMapOf(
+            -1 to "Incertidumbre",
             0 to "Muy Peligrosa",
             1 to "Peligrosa",
             2 to "Ok",

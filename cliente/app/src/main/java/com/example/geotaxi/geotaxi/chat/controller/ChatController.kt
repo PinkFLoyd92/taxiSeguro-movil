@@ -1,5 +1,6 @@
 package com.example.geotaxi.geotaxi.chat.controller
 
+import android.app.DialogFragment
 import co.intentservice.chatui.models.ChatMessage
 import com.example.geotaxi.geotaxi.chat.ChatAdapter
 import com.example.geotaxi.geotaxi.chat.ChatMapped

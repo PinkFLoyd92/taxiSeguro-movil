@@ -7,8 +7,6 @@ import com.example.geotaxi.geotaxi.chat.ChatAdapter
 import com.example.geotaxi.geotaxi.chat.ChatRecyclerView
 import com.example.geotaxi.geotaxi.chat.model.ChatList
 import com.example.geotaxi.geotaxi.ui.MainActivity
-import kotlinx.android.synthetic.main.nav_body.view.*
-import org.w3c.dom.Text
 
 /**
  * Created by sebas on 2/4/18.
